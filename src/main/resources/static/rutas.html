@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rutas - Logísticas PEPE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .inline-feedback {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .loader {
+            display: none;
+            width: 40px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-success">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="index.html">← Volver | Logísticas PEPE</a>
+    </div>
+</nav>
+
+<div class="container mt-5">
+    <h2 class="text-center mb-4">🛣️ Gestión de Rutas</h2>
+
+    <!-- Crear Ruta -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">Agregar Ruta</div>
+        <div class="card-body">
+            <form id="formRuta">
+                <div class="inline-feedback">
+                        <input type="text" id="origenRuta" class="form-control" placeholder="Ciudad origen" required>
+                        <input type="text" id="destinoRuta" class="form-control" placeholder="Ciudad destino" required>
+                        <input type="number" id="distanciaRuta" class="form-control" placeholder="Distancia (km)" required>
+                    <button type="submit" class="btn btn-success  class col-md-3 ml-1">Crear Ruta</button>
+                </div>
+
+            </form>
+            <div class="inline-feedback">
+            <img id="loaderCrear" src="imgs/camionCargando.gif" alt="Cargando..." class="loader">
+            <div id="mensajeRuta" class="mt-2 text-success"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Eliminar Ruta -->
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">Eliminar Ruta</div>
+        <div class="card-body w=100%">
+            <form id="formEliminarRuta" class="inline-feedback w=100%">
+                <div class="inline-feedback">
+                        <input type="text" id="origenEliminar" class="form-control" placeholder="Ciudad origen" required>
+                        <input type="text" id="destinoEliminar" class="form-control" placeholder="Ciudad destino" required>
+                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                </div>
+                <div class="inline-feedback">
+                    <img id="loaderEliminar" src="imgs/camionCargando.gif" alt="Cargando..." class="loader">
+                    <div id="mensajeEliminarRuta" class="mt-2 text-white"></div>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    const API = "http://localhost:8080/neo";
+
+    // Crear
+    document.getElementById("formRuta").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const loader = document.getElementById("loaderCrear");
+        loader.style.display = "block";
+        const origen = document.getElementById("origenRuta").value;
+        const destino = document.getElementById("destinoRuta").value;
+        const distancia = document.getElementById("distanciaRuta").value;
+        const res = await fetch(`${API}/ruta?origen=${origen}&destino=${destino}&distancia=${distancia}`, { method: "POST" });
+        document.getElementById("mensajeRuta").innerText = await res.text();
+        loader.style.display = "none";
+        e.target.reset();
+    });
+
+    // Eliminar
+    document.getElementById("formEliminarRuta").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const loader = document.getElementById("loaderEliminar");
+        loader.style.display = "block";
+        const origen = document.getElementById("origenEliminar").value;
+        const destino = document.getElementById("destinoEliminar").value;
+        const res = await fetch(`${API}/ruta?origen=${origen}&destino=${destino}`, { method: "DELETE" });
+        document.getElementById("mensajeEliminarRuta").innerText = await res.text();
+        loader.style.display = "none";
+        e.target.reset();
+    });
+</script>
+
+</body>
+</html>

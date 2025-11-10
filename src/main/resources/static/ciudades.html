@@ -9,12 +9,24 @@
         .inline-feedback {
             display: flex;
             align-items: center;
-            gap: 10px;
+            /*gap: 10px;*/
         }
         .loader {
             display: none;
             width: 40px;
         }
+        .btn{
+            text-wrap: nowrap;
+            width: 10%;
+        }
+        #btnEditar{
+            width: 17%;
+        }
+        .form-control{
+            margin-right: 10px;
+        }
+
+
     </style>
 </head>
 <body class="bg-light">
@@ -34,11 +46,13 @@
         <div class="card-body">
             <form id="formCiudad" class="">
                 <div class="inline-feedback">
-                <input type="text" id="nombreCiudad" class="form-control" placeholder="Nombre de la ciudad" required>
-                    <button type="submit" class="btn btn-primary">Crear</button></div>
-                <div class="inline-feedback mt-1">
-                <img id="loaderCrear" src="imgs/camionCargando.gif" alt="Cargando..." class="loader">
-                <div id="mensajeCiudad" class="text-success"></div></div>
+                    <input type="text" id="nombreCiudad" class="form-control" placeholder="Nombre de la ciudad" required>
+                    <button type="submit" class="btn btn-primary">Crear</button>
+                </div>
+                <div class="inline-feedback mt-2">
+                    <img id="loaderCrear" src="imgs/camionCargando.gif" alt="Cargando..." class="loader">
+                    <div id="mensajeCiudad" class="text-success"></div>
+                </div>
             </form>
         </div>
     </div>
@@ -47,13 +61,16 @@
     <div class="card mb-4">
         <div class="card-header bg-warning text-dark">Editar Ciudad</div>
         <div class="card-body">
-            <form id="formEditarCiudad" class="">
+            <form id="formEditarCiudad">
                 <div class="inline-feedback">
                 <input type="text" id="nombreCiudadActual" class="form-control" placeholder="Nombre actual" required>
                 <input type="text" id="nuevoNombreCiudad" class="form-control" placeholder="Nuevo nombre" required>
-                    <button type="submit" class="btn btn-warning">Editar</button><br> </div> <div class="inline-feedback mt-1">
-                <img id="loaderEditar" src="imgs/camionCargando.gif" alt="Cargando..." class="loader">
-                <div id="mensajeEditarCiudad" class="text-dark"></div> </div>
+                <button type="submit" class="btn btn-warning" id="btnEditar">Editar</button><br>
+                </div>
+                <div class="inline-feedback mt-2">
+                    <img id="loaderEditar" src="imgs/camionCargando.gif" alt="Cargando..." class="loader">
+                    <div id="mensajeEditarCiudad" class="text-dark"></div>
+                </div>
             </form>
         </div>
     </div>
@@ -62,15 +79,15 @@
     <div class="card mb-4">
         <div class="card-header bg-danger text-white">Eliminar Ciudad</div>
         <div class="card-body">
-            <form id="formEliminarCiudad" >
-
+            <form id="formEliminarCiudad">
                 <div class="inline-feedback">
-                <input type="text" id="nombreEliminarCiudad" class="form-control" placeholder="Nombre de la ciudad a eliminar" required>
-                <button type="submit" class="btn btn-danger">Eliminar</button><br>
+                    <input type="text" id="nombreEliminarCiudad" class="form-control" placeholder="Nombre de la ciudad a eliminar" required>
+                    <button type="submit" class="btn btn-danger">Eliminar</button><br>
                 </div>
-                <div class="inline-feedback mt-1">
-                <img id="loaderEliminar" src="imgs/camionCargando.gif" alt="Cargando..." class="loader">
-                    <div id="mensajeEliminarCiudad" class="text-dark"></div></div>
+                <div class="inline-feedback mt-2">
+                    <img id="loaderEliminar" src="imgs/camionCargando.gif" alt="Cargando..." class="loader">
+                    <div id="mensajeEliminarCiudad" class="text-dark"></div>
+                </div>
             </form>
         </div>
     </div>

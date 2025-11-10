@@ -15,6 +15,11 @@
             display: none;
             width: 40px;
         }
+        .btn{
+            text-wrap: nowrap;
+            width: 15%;
+        }
+
     </style>
 </head>
 <body class="bg-light">
@@ -34,36 +39,34 @@
         <div class="card-body">
             <form id="formRuta">
                 <div class="inline-feedback">
-                        <input type="text" id="origenRuta" class="form-control" placeholder="Ciudad origen" required>
-                        <input type="text" id="destinoRuta" class="form-control" placeholder="Ciudad destino" required>
-                        <input type="number" id="distanciaRuta" class="form-control" placeholder="Distancia (km)" required>
-                    <button type="submit" class="btn btn-success  class col-md-3 ml-1">Crear Ruta</button>
+                    <input type="text" id="origenRuta" class="form-control" placeholder="Ciudad origen" required>
+                    <input type="text" id="destinoRuta" class="form-control" placeholder="Ciudad destino" required>
+                    <input type="number" id="distanciaRuta" class="form-control" placeholder="Distancia (km)" required>
+                    <button type="submit" class="btn btn-success">Crear Ruta</button>
                 </div>
-
+                <div class="inline-feedback mt-2">
+                    <img id="loaderCrear" src="imgs/camionCargando.gif" alt="Cargando..." class="loader">
+                    <div id="mensajeRuta" class="mt-2 text-success"></div>
+                </div>
             </form>
-            <div class="inline-feedback">
-            <img id="loaderCrear" src="imgs/camionCargando.gif" alt="Cargando..." class="loader">
-            <div id="mensajeRuta" class="mt-2 text-success"></div>
-            </div>
         </div>
     </div>
 
     <!-- Eliminar Ruta -->
     <div class="card mb-4">
         <div class="card-header bg-danger text-white">Eliminar Ruta</div>
-        <div class="card-body w=100%">
-            <form id="formEliminarRuta" class="inline-feedback w=100%">
+        <div class="card-body">
+            <form id="formEliminarRuta" class="">
                 <div class="inline-feedback">
-                        <input type="text" id="origenEliminar" class="form-control" placeholder="Ciudad origen" required>
-                        <input type="text" id="destinoEliminar" class="form-control" placeholder="Ciudad destino" required>
-                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                    <input  type="text" id="origenEliminar" class="form-control" placeholder="Ciudad origen" required>
+                    <input  type="text" id="destinoEliminar" class="form-control" placeholder="Ciudad destino" required>
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
                 </div>
-                <div class="inline-feedback">
+                <div class="inline-feedback mt-2">
                     <img id="loaderEliminar" src="imgs/camionCargando.gif" alt="Cargando..." class="loader">
                     <div id="mensajeEliminarRuta" class="mt-2 text-white"></div>
                 </div>
             </form>
-
         </div>
     </div>
 </div>

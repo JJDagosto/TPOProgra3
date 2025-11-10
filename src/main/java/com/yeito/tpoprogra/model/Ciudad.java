@@ -3,6 +3,8 @@ package com.yeito.tpoprogra.model;
 import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
+import org.springframework.data.neo4j.core.schema.Relationship;
+
 
 import java.util.HashSet;
 import java.util.Set;
@@ -18,6 +20,7 @@ public class Ciudad {
 
     public Ciudad() {}
 
+    @Relationship(type = "RUTA")
     private Set<Ruta> rutas = new HashSet<>();
 
 

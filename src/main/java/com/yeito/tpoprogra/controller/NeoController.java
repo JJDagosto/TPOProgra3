@@ -6,6 +6,11 @@ import com.yeito.tpoprogra.repository.CiudadRepository;
 import com.yeito.tpoprogra.service.NeoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import com.yeito.tpoprogra.service.GrafoService;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/neo")
@@ -15,6 +20,8 @@ public class NeoController {
 
     @Autowired
     private NeoService neoService;
+    @Autowired
+    private GrafoService grafoService;
 
     // --- CIUDADES ---
 
@@ -39,9 +46,14 @@ public class NeoController {
     // --- RUTAS ---
 
     @PostMapping("/ruta")
-    public String crearRuta(@RequestParam long idorigen, @RequestParam long iddestino, @RequestParam double distancia) {
+    public String crearRuta(@RequestParam String origen, @RequestParam String destino, @RequestParam double distancia) {
+        long idorigen = neoService.obtenerIdPorNombre(origen);
+        long iddestino = neoService.obtenerIdPorNombre(destino);
+
         neoService.crearRuta(idorigen, iddestino, distancia);
-        return "✅ Ruta creada entre " + idorigen + " y " + iddestino;
+        neoService.crearRuta(iddestino, idorigen, distancia);
+
+        return "✅ Rutas creada entre " + origen + " y " + destino;
     }
 
     @PutMapping("/ruta")
@@ -53,6 +65,7 @@ public class NeoController {
     @DeleteMapping("/ruta")
     public String eliminarRuta(@RequestParam String origen, @RequestParam String destino) {
         neoService.eliminarRuta(neoService.obtenerIdRuta(origen, destino));
+        neoService.eliminarRuta(neoService.obtenerIdRuta(destino, origen));
         return "🗑️ Ruta eliminada entre "; //+ origen + " y " + destino;
     }
 
@@ -83,52 +96,41 @@ public class NeoController {
     }
 
 
+    @GetMapping("/grafo/resumen")
+    public String resumenGrafo() {
+        return grafoService.resumenGrafo();
+    }
+
+    @GetMapping("/grafo/recargar")
+    public String recargarGrafo() {
+        grafoService.recargarGrafo();
+        return "Grafo recargado correctamente.";
+    }
+
+    @GetMapping("/grafo/bfs")
+    public List<String> bfs(@RequestParam String inicio) {
+        return grafoService.bfs(inicio);
+    }
+
+    @GetMapping("/grafo/dfs")
+    public List<String> dfs(@RequestParam String inicio) {
+        return grafoService.dfs(inicio);
+    }
+
+    @GetMapping("/grafo/dijkstra")
+    public Map<String, Object> dijkstra(@RequestParam String origen, @RequestParam String destino) {
+        return grafoService.dijkstra(origen, destino);
+    }
+
+    @GetMapping("/grafo/prim")
+    public Map<String, Object> prim(@RequestParam String inicio) {
+        return grafoService.prim(inicio);
+    }
+
+    @GetMapping("/grafo/kruskal")
+    public Map<String, Object> kruskal() {
+        return grafoService.kruskal();
+    }
+
 
 }
-
-//@RestController
-//@RequestMapping("/neo")
-//public class NeoController {
-//
-//    @Autowired
-//    private NeoService neoService;
-//
-//    // --- CIUDADES ---
-//
-//    @PostMapping("/ciudad")
-//    public String crearCiudad(@RequestParam String nombre) {
-//        neoService.crearCiudad(nombre);
-//        return "✅ Ciudad creada: " + nombre;
-//    }
-//
-//    @PutMapping("/ciudad")
-//    public String editarCiudad(@RequestParam String nombreActual, @RequestParam String nuevoNombre) {
-//        neoService.editarCiudadPorNombre(nombreActual, nuevoNombre);
-//        return "✏️ Ciudad actualizada: " + nuevoNombre;
-//    }
-//
-//    @DeleteMapping("/ciudad")
-//    public String eliminarCiudad(@RequestParam String nombre) {
-//        neoService.eliminarCiudadPorNombre(nombre);
-//        return "🗑️ Ciudad eliminada: " + nombre;
-//    }
-//
-//    // --- RUTAS ---
-//
-//    @PostMapping("/ruta")
-//    public String crearRuta(@RequestParam String origen, @RequestParam String destino, @RequestParam double distancia) {
-//        neoService.crearRutaPorNombres(origen, destino, distancia);
-//        return "✅ Ruta creada entre " + origen + " y " + destino;
-//    }
-//
-//    @DeleteMapping("/ruta")
-//    public String eliminarRuta(@RequestParam String origen, @RequestParam String destino) {
-//        neoService.eliminarRutaPorNombres(origen, destino);
-//        return "🗑️ Ruta eliminada entre " + origen + " y " + destino;
-//    }
-//
-//    @GetMapping("/hola")
-//    public String hola() {
-//        return "Hola desde NeoController 👋";
-//    }
-//}

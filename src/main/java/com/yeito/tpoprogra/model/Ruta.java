@@ -10,8 +10,6 @@ import org.springframework.data.neo4j.core.schema.Id;
 @RelationshipProperties
 public class Ruta {
 
-    @Setter
-    @Getter
     @Id
     @GeneratedValue
     private Long id;
@@ -30,6 +28,10 @@ public class Ruta {
         this.distancia = distancia;
         this.destino = destino;
         this.origen = origen;
+    }
+
+    public Long getId() {
+        return id;
     }
 
     public double getDistancia() { return distancia; }

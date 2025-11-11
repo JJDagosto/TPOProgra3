@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cálculo de Caminos - Logísticas PEPE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>.loader { display:none; width:50px; }</style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-info">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="index.html">← Volver | Logísticas PEPE</a>
+    </div>
+</nav>
+
+<div class="container mt-5">
+
+    <h2 class="text-center mb-4">🧭 Calcular Caminos</h2>
+    <p class="text-center text-muted mb-4">Elegí el método de cálculo</p>
+
+    <div class="row g-4">
+
+        <!-- Dijkstra -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white fw-bold">🔍 Camino más corto (Dijkstra)</div>
+                <div class="card-body">
+                    <form id="formDijkstra">
+                        <input type="text" class="form-control mb-2" id="origenD" placeholder="Ciudad origen" required>
+                        <input type="text" class="form-control mb-2" id="destinoD" placeholder="Ciudad destino" required>
+                        <button class="btn btn-info w-100 text-white">Calcular</button>
+                    </form>
+                    <img id="loaderDijkstra" src="imgs/camionCargando.gif" class="loader mt-2">
+                    <div id="msgDijkstra" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backtracking -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white fw-bold">🔁 Rutas complejas (Backtracking)</div>
+                <div class="card-body">
+                    <form id="formBT">
+                        <input type="text" class="form-control mb-2" id="origenBT" placeholder="Ciudad origen" required>
+                        <input type="text" class="form-control mb-2" id="destinoBT" placeholder="Ciudad destino" required>
+                        <button class="btn btn-secondary w-100 text-white">Calcular</button>
+                    </form>
+                    <img id="loaderBT" src="imgs/camionCargando.gif" class="loader mt-2">
+                    <div id="msgBT" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+        const API = "http://localhost:8080/neo";
+
+        // Dijkstra (camino más corto)
+        document.getElementById("formDijkstra").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = e.submitter; // opcional para deshabilitar
+        const loader = document.getElementById("loaderDijkstra");
+        loader.style.display = "block";
+
+        const origen = document.getElementById("origenD").value.trim();
+        const destino = document.getElementById("destinoD").value.trim();
+
+        try {
+        const res = await fetch(`${API}/grafo/dijkstra?origen=${encodeURIComponent(origen)}&destino=${encodeURIComponent(destino)}`);
+        if (!res.ok) throw new Error("Backend no disponible");
+        const data = await res.json();
+        document.getElementById("msgDijkstra").innerHTML =
+        `Ruta más corta: <b>${(data.ruta || []).join(" → ")}</b><br>Distancia total: <b>${data.distanciaTotal ?? '-'} km</b>`;
+    } catch (err) {
+        document.getElementById("msgDijkstra").innerHTML = "⚠️ Resultado ejemplo (mock): A → B → C<br>Distancia: 123 km";
+    } finally {
+        loader.style.display = "none";
+    }
+    });
+
+        // Backtracking (rutas complejas) – si el backend no está, mostramos mock
+        document.getElementById("formBT").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const loader = document.getElementById("loaderBT");
+        loader.style.display = "block";
+
+        const origen = document.getElementById("origenBT").value.trim();
+        const destino = document.getElementById("destinoBT").value.trim();
+
+        try {
+        const res = await fetch(`${API}/rutas/backtracking?origen=${encodeURIComponent(origen)}&destino=${encodeURIComponent(destino)}`);
+        if (!res.ok) throw new Error("Backend no disponible");
+        const data = await res.text(); // o .json() si luego lo definen
+        document.getElementById("msgBT").innerHTML = data;
+    } catch (err) {
+        document.getElementById("msgBT").innerHTML = "⚠️ Resultado ejemplo (mock): A → D → F → B (Backtracking)";
+    } finally {
+        loader.style.display = "none";
+    }
+    });
+</script>
+
+</body>
+</html>

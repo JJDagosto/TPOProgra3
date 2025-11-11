@@ -264,8 +264,4 @@ public class GrafoService {
             return "[" + origen + " - " + destino + " (" + peso + " km)]";
         }
     }
-
-
-
-
 }

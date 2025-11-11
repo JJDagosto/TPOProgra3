@@ -7,5 +7,3 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface RutaRepository extends Neo4jRepository<Ruta, Long> {
 }
-
-

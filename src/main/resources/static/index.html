@@ -21,11 +21,27 @@
     <div class="d-grid gap-3 col-md-6 mx-auto">
         <a href="ciudades.html" class="btn btn-outline-primary btn-lg">🏙️ Gestionar Ciudades</a>
         <a href="rutas.html" class="btn btn-outline-success btn-lg">🛣️ Gestionar Rutas</a>
+        <a href="camiones.html" class="btn btn-outline-dark btn-lg">🚚 Cargar Camiones</a>
+        <a href="caminos.html" class="btn btn-outline-info btn-lg">🧭 Calcular Caminos</a>
+        <a href="mapa.html" class="btn btn-outline-secondary btn-lg">🗺️ Visualizar mapa</a>
+        <a href="#" class="btn btn-outline-danger btn-lg" onclick="enviarCamiones()">📤 Enviar Camiones</a>
     </div>
 
     <hr class="my-5">
     <p class="text-secondary">Más módulos próximamente: cálculo de caminos, optimización, reportes, etc.</p>
 </div>
+
+<script>
+    const API = "http://localhost:8080/neo";
+
+    async function enviarCamiones() {
+        const confirmacion = confirm("¿Seguro que querés enviar los camiones? Esta acción vaciará la base.");
+        if (!confirmacion) return;
+
+        const res = await fetch(`${API}/camiones/enviar`, { method: "DELETE" });
+        alert(await res.text());
+    }
+</script>
 
 </body>
 </html>

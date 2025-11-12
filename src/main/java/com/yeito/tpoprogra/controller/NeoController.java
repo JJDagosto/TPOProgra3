@@ -1,10 +1,10 @@
+
 package com.yeito.tpoprogra.controller;
 
 
 import com.yeito.tpoprogra.model.Camion;
 import com.yeito.tpoprogra.model.Ciudad;
 import com.yeito.tpoprogra.model.Paquete;
-import com.yeito.tpoprogra.model.Ruta;
 import com.yeito.tpoprogra.repository.CamionRepository;
 import com.yeito.tpoprogra.repository.CiudadRepository;
 import com.yeito.tpoprogra.repository.PaqueteRepository;
@@ -14,10 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.yeito.tpoprogra.service.GrafoService;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -40,6 +37,30 @@ public class NeoController {
 
     // --- CIUDADES ---
 
+    @GetMapping("/ciudad/get")
+    public List<Ciudad> getCiudad() {
+        return ciudadRepository.findAll();
+    }
+
+    @GetMapping("/ciudad/get/nombres")
+    public List<String> getCiudadNombres() {
+        return ciudadRepository.findAll().stream().map(Ciudad::getNombre).collect(Collectors.toList());
+    }
+
+    @GetMapping("/camion/list")
+    public List<Map<String, Object>> getCamiones() {
+        List<Camion> camiones = camionRepository.findAll();
+        List<Map<String, Object>> resultado = new ArrayList<>();
+
+        for (Camion camion : camiones) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", camion.getId());
+            item.put("texto", camion.toString());
+            resultado.add(item);
+        }
+        return resultado;
+    }
+
     @PostMapping("/ciudad")
     public String crearCiudad(@RequestParam String nombre) {
         neoService.crearCiudad(nombre);
@@ -60,6 +81,21 @@ public class NeoController {
 
     // --- RUTAS ---
 
+    @GetMapping("/ruta/distancia")
+    public ResponseEntity<Double> obtenerDistancia(
+            @RequestParam String origen,
+            @RequestParam String destino) {
+
+        Double dist = neoService.obtenerDistancia(origen, destino);
+
+        if (dist == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(dist);
+    }
+
+
     @PostMapping("/ruta")
     public String crearRuta(@RequestParam String origen, @RequestParam String destino, @RequestParam double distancia) {
         long idorigen = neoService.obtenerIdPorNombre(origen);
@@ -68,21 +104,26 @@ public class NeoController {
         neoService.crearRuta(idorigen, iddestino, distancia);
         neoService.crearRuta(iddestino, idorigen, distancia);
 
+        grafoService.recargarGrafo();
+
         return "✅ Rutas creada entre " + origen + " y " + destino;
     }
 
     @PutMapping("/ruta")
     public String editarRuta(@RequestParam Long destino, @RequestParam double distancia) {
         neoService.editarRuta(destino, distancia);
-        return "✏️ Ruta actualizada entre "; // + origen + " y " + destino;
+        return "✏️ Ruta actualizada";
     }
 
     @DeleteMapping("/ruta")
     public String eliminarRuta(@RequestParam String origen, @RequestParam String destino) {
-        neoService.eliminarRuta(neoService.obtenerIdRuta(origen, destino));
-        neoService.eliminarRuta(neoService.obtenerIdRuta(destino, origen));
-        return "🗑️ Ruta eliminada entre "; //+ origen + " y " + destino;
+        neoService.eliminarRuta(origen, destino);
+        neoService.eliminarRuta(destino, origen);
+        grafoService.recargarGrafo();
+
+        return "🗑️ Ruta eliminada entre " + origen + " y " + destino;
     }
+
 
     @GetMapping ("/ciudad/id")
     public Long obtenerIdCiudad(@RequestParam String nombre) {
@@ -127,9 +168,36 @@ public class NeoController {
     }
 
     @GetMapping("/grafo/dijkstra")
-    public Map<String, Object> dijkstra(@RequestParam String origen, @RequestParam String destino) {
-        return grafoService.dijkstra(origen, destino);
+    public Map<String, Object> dijkstra(
+            @RequestParam String origen,
+            @RequestParam String destino) {
+
+        var resultado = grafoService.dijkstra(origen, destino);
+
+        List<String> ruta = (List<String>) resultado.get("ruta");
+        List<Map<String, Object>> aristas = new ArrayList<>();
+
+        // Armamos aristas para el mapa
+        for (int i = 0; i < ruta.size() - 1; i++) {
+            String a = ruta.get(i);
+            String b = ruta.get(i + 1);
+
+            Double peso = grafoService.obtenerDistancia(a, b);
+
+            aristas.add(Map.of(
+                    "origen", a,
+                    "destino", b,
+                    "peso", peso == null ? 0.0 : peso
+            ));
+        }
+
+        return Map.of(
+                "ruta", ruta,
+                "distanciaTotal", resultado.get("distanciaTotal"),
+                "aristas", aristas
+        );
     }
+
 
     @GetMapping("/grafo/prim")
     public Map<String, Object> prim(@RequestParam String inicio) {
@@ -180,11 +248,40 @@ public class NeoController {
         return neoService.getPaquetes();
     }
 
-    @GetMapping("/paquetes/sort")
+    @PostMapping("/paquetes/sort")
     public List<Paquete> quickSortPaquetes() {
         List<Paquete> paquetes = neoService.getPaquetes();
         grafoService.quickSortPaquetes(paquetes, 0, paquetes.size() - 1);
         return paquetes;
+    }
+
+    @GetMapping("/paquetes/sort")
+    public Map<Long, Double> sortPaquetes() {
+        List<Paquete> paquetes = neoService.getPaquetes();
+        Map<Long, Double> paquetesMap = new LinkedHashMap<>();
+        grafoService.quickSortPaquetes(paquetes, 0, paquetes.size() - 1);
+        for (Paquete paquete : paquetes) {
+            paquetesMap.put(paquete.getId(), paquete.getPeso());
+        }
+        return paquetesMap;
+    }
+
+    @PostMapping("/camion/cargar")
+    public String cargarCamion(@RequestParam Long camionId) {
+        Camion camion = camionRepository.findById(camionId).orElseThrow(() -> new RuntimeException("Camion no encontrado"));
+        // Lógica de carga óptima (Knapsack)
+        List<Paquete> seleccionados = grafoService.cargarCamionOptimo(camion);
+
+        // Guardamos el camión con sus paquetes y destinos en Neo4j
+        camionRepository.save(camion);
+
+        for (Paquete p : seleccionados) {
+            paqueteRepository.deleteById(p.getId());
+        }
+
+        // Mensaje de resumen
+        return "🚚 Camión cargado con " + seleccionados.size() + " paquetes ("
+                + camion.getCargaActual() + "/" + camion.getCapacidad() + " kg)";
     }
 
     // Crear un camión vacío
@@ -221,50 +318,117 @@ public class NeoController {
     }
 
 
-    @PostMapping("/camion/cargar")
-    public String cargarCamion(@RequestParam Long camionId) {
-        Optional<Camion> camionOpt = camionRepository.findById(camionId);
-        if(camionOpt.isEmpty()) return "❌ Camión no encontrado";
+    @PutMapping("/camion/cargarManual")
+    public String cargarCamionManual(@RequestBody Map<String, Object> data) {
+        try {
+            // Forzamos conversión segura
+            Long camionId = Long.valueOf(data.get("id").toString());
 
-        Camion camion = camionOpt.get();
-        List<Paquete> seleccionados = grafoService.cargarCamionOptimo(camion);
-        camionRepository.save(camion);
+            // Buscamos el camión
+            Camion camion = camionRepository.findById(camionId)
+                    .orElseThrow(() -> new RuntimeException("Camión no encontrado"));
 
-        return "🚚 Camión cargado con " + seleccionados.size() + " paquetes ("
-                + camion.getCargaActual() + "/" + camion.getCapacidad() + " kg)";
+            // Convertimos los IDs de paquetes
+            @SuppressWarnings("unchecked")
+            List<Object> paqueteIdsRaw = (List<Object>) data.get("paquetes");
+
+            List<Long> paqueteIds = paqueteIdsRaw.stream()
+                    .map(Object::toString)
+                    .map(Long::valueOf)
+                    .toList();
+
+            // Buscamos los paquetes y los agregamos
+            List<Paquete> paquetes = new ArrayList<>();
+            double pesoTotal = 0;
+            for (Long id : paqueteIds) {
+                Paquete p = neoService.getPaqueteById(id);
+                if (p != null) {
+                    paquetes.add(p);
+                    pesoTotal += p.getPeso();
+                }
+            }
+
+            camion.getPaquetes().addAll(paquetes);
+            camion.setCargaActual(camion.getCargaActual() + pesoTotal);
+            camionRepository.save(camion);
+
+            // Eliminamos los paquetes cargados (opcional)
+            for (Paquete p : paquetes) {
+                neoService.deletePaquete(p.getId());
+            }
+
+            return "🚛 Camión " + camion.getId() + " cargado manualmente con " +
+                    paquetes.size() + " paquetes (" +
+                    camion.getCargaActual() + "/" + camion.getCapacidad() + " kg)";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "❌ Error al cargar camión manual: " + e.getMessage();
+        }
     }
 
-    @GetMapping("/ciudades/all")
-    public List<String> getCiudades() {
-        return ciudadRepository.findAll()
-                .stream()
-                .map(Ciudad::getNombre)
+
+    @GetMapping("/paquete/aTexto")
+    public String paqueteATexto(@RequestParam Long ID) {
+        Paquete paquete = paqueteRepository.findById(ID).orElse(null);
+        return paquete.getPeso() + " | Origen: " + paquete.getOrigen().getNombre() + " -> Destino: " + paquete.getDestino().getNombre();
+    }
+    @DeleteMapping("/camiones/enviar")
+    public String enviarCamiones() {
+        List<Camion> camiones = camionRepository.findAll();
+
+        // Filtramos solo los que tengan paquetes
+        List<Camion> aEnviar = camiones.stream()
+                .filter(c -> c.getPaquetes() != null && !c.getPaquetes().isEmpty())
                 .toList();
+
+        if (aEnviar.isEmpty()) {
+            return "❌ No hay camiones con paquetes para enviar.";
+        }
+
+        // Guardar los IDs antes de eliminar
+        List<Long> ids = aEnviar.stream().map(Camion::getId).toList();
+
+        // Borrar solo esos camiones
+        for (Camion c : aEnviar) {
+            camionRepository.deleteById(c.getId());
+        }
+
+        return "✅ Se enviaron los camiones: " + ids;
     }
 
-    @GetMapping("/ruta/distancia")
-    public Double obtenerDistancia(
-            @RequestParam String origen,
-            @RequestParam String destino
-    ) {
-        Long idOrigen = neoService.obtenerIdPorNombre(origen);
-        var ciudadOpt = ciudadRepository.findById(idOrigen);
+    @GetMapping("/grafo/branchbound")
+    public Map<String, Object> branchBound(
+            @RequestParam String inicio,
+            @RequestParam double maxDistancia) {
 
-        if (ciudadOpt.isEmpty()) return null;
+        var resultado = grafoService.optimizarCiudades(inicio, maxDistancia);
 
-        return ciudadOpt.get()
-                .getRutas()
-                .stream()
-                .filter(r -> r.getDestino().getNombre().equals(destino))
-                .map(Ruta::getDistancia)
-                .findFirst()
-                .orElse(null);
+        List<Map<String, Object>> aristas = new ArrayList<>();
+
+        for (int i = 0; i < resultado.mejorRuta.size() - 1; i++) {
+            String origen = resultado.mejorRuta.get(i);
+            String destino = resultado.mejorRuta.get(i + 1);
+
+            Double peso = grafoService.obtenerDistancia(origen, destino);
+
+            // ✅ Si no existe conexión directa, NO agregamos la arista
+            if (peso == null) continue;
+
+            aristas.add(Map.of(
+                    "origen", origen,
+                    "destino", destino,
+                    "peso", peso
+            ));
+        }
+
+        return Map.of(
+                "mejorRuta", resultado.mejorRuta,
+                "ciudadesVisitadas", resultado.ciudadesVisitadas,
+                "distanciaTotal", resultado.distanciaTotal,
+                "aristas", aristas
+        );
     }
 
-    @GetMapping("/ciudad/get/nombres")
-    public List<String> getCiudadNombres() {
-        return ciudadRepository.findAll().stream().map(Ciudad::getNombre).collect(Collectors.toList());
-    }
 
 
 }

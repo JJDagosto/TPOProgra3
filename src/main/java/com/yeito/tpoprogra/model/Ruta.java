@@ -43,4 +43,3 @@ public class Ruta {
     public Ciudad getOrigen() { return origen; }
     public void setOrigen(Ciudad origen) { this.origen = origen; }
 }
-

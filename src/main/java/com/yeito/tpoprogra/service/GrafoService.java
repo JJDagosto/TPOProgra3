@@ -187,6 +187,7 @@ public class GrafoService {
             cola.add(new String[]{inicio, entry.getKey(), entry.getValue().toString()});
         }
 
+
         while (!cola.isEmpty() && visitados.size() < grafo.size()) {
             String[] arista = cola.poll();
             String origen = arista[0];
@@ -437,6 +438,12 @@ public class GrafoService {
 
         rutaActual.remove(rutaActual.size() - 1);
         visitadas.remove(actual);
+    }
+    public Double obtenerDistancia(String origen, String destino) {
+        if (grafo.containsKey(origen) && grafo.get(origen).containsKey(destino)) {
+            return grafo.get(origen).get(destino);
+        }
+        return null;
     }
 
 

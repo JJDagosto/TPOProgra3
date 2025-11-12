@@ -10,10 +10,6 @@
     <style>
         /* ==== ANIMACIONES ==== */
 
-        .nodo {
-            opacity: 0;
-            animation: fadeIn 0.5s forwards;
-        }
 
 
         .linea {
@@ -44,6 +40,10 @@
         }
 
         .nodo {
+            width: 100px;
+            padding: 5px;
+            border-radius: 12px;
+            font-size: 13px;
             position: absolute;
             text-align: center;
             transform: translate(-50%, -50%);
@@ -55,8 +55,8 @@
 
 
         .nodo img {
-            width: 40px;   /* Aca pones el tamaño del PNG */
-            height: 40px;
+            width: 26px;   /* Aca pones el tamaño del PNG */
+            height: 26px;
             display: block;
             margin: auto;
         }
@@ -69,7 +69,8 @@
             font-size: 13px;
             display: inline-block;
             margin-top: 3px;
-        }            transition: transform 0.2s ease;
+            transition: transform 0.2s ease;
+        }
 
         .linea {
             position: absolute;
@@ -172,6 +173,18 @@
             mapa.innerHTML = "";
             loader.style.display = "block";
 
+            const ancho = mapa.clientWidth || 800;
+            const alto  = mapa.clientHeight || 300;
+
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("width", ancho);
+            svg.setAttribute("height", alto);
+            svg.style.position = "absolute";
+            svg.style.left = "0";
+            svg.style.top = "0";
+            svg.style.zIndex = "9000";
+            mapa.appendChild(svg);
+
             try {
                 const res = await fetch(`${API}/grafo/dfs?inicio=${encodeURIComponent(origen)}`, { cache: "no-store" });
                 if (!res.ok) throw new Error("HTTP " + res.status);
@@ -184,46 +197,77 @@
                     return;
                 }
 
-                const ancho = mapa.clientWidth || 800;
-                const alto  = mapa.clientHeight || 300;
-
                 const nodosPos = {};
 
-                // Distribución horizontal tipo camino
-                recorrido.forEach((ciudad, i) => {
-                    const x = (ancho / (recorrido.length + 1)) * (i + 1);
-                    const y = alto * 0.5;
-                    nodosPos[ciudad] = { x, y };
+                // ==== Distribución serpentina (zig-zag) en 4 filas ====
+                const total = recorrido.length;
+                const filas = 4;
+                const nodosPorFila = Math.ceil(total / filas);
 
+                for (let i = 0; i < total; i++) {
+                    const ciudad = recorrido[i];
+
+                    // fila a la que pertenece
+                    const fila = Math.floor(i / nodosPorFila);
+
+                    // índice dentro de esa fila
+                    let posEnFila = i % nodosPorFila;
+
+                    // SERPENTINA: si la fila es impar, invertimos el orden en X
+                    if (fila % 2 === 1) {
+                        posEnFila = (nodosPorFila - 1) - posEnFila;
+                    }
+
+                    const x = (ancho / (nodosPorFila + 1)) * (posEnFila + 1);
+
+                    // posición vertical según fila
+                    let y;
+                    if (fila === 0) y = alto * 0.22;
+                    if (fila === 1) y = alto * 0.42;
+                    if (fila === 2) y = alto * 0.62;
+                    if (fila === 3) y = alto * 0.82;
+
+                    nodosPos[ciudad] = { x, y };
+                    crearNodo(ciudad, x, y);
+                }
+
+
+
+                function crearNodo(ciudad, x, y) {
                     const div = document.createElement("div");
                     div.className = "nodo";
-                    div.style.position = "absolute";
                     div.style.left = x + "px";
                     div.style.top  = y + "px";
+                    div.style.position = "absolute";
                     div.style.zIndex = "9999";
                     div.style.transform = "translate(-50%, -50%)";
-                    div.style.background = "rgba(255,255,255,0.9)";
-                    div.style.border = "1px solid #333";
-                    div.style.color = "#000";
-                    div.style.padding = "6px";
-                    div.style.borderRadius = "8px";
-                    div.style.fontSize = "14px";
                     div.style.display = "flex";
                     div.style.flexDirection = "column";
                     div.style.alignItems = "center";
                     div.style.gap = "4px";
+                    div.style.background = "rgba(255,255,255,0.9)";
+                    div.style.border = "1px solid #333";
+                    div.style.padding = "3px";
+                    div.style.borderRadius = "8px";
+                    div.style.fontSize = "12px";
+                    div.style.width = "110px";     // ancho fijo
+                    div.style.textAlign = "center";
+                    div.style.whiteSpace = "normal";  // permite salto de línea
+                    div.style.wordWrap = "break-word"; // corta palabras largas
 
                     div.innerHTML = `
-  <img src="imgs/ubicaciones.png" width="40" height="40" alt="Ciudad">
-  <span>${ciudad}</span>
-`;
+        <img src="imgs/ubicaciones.png" width="40" height="40" alt="Ciudad">
+        <span>${ciudad}</span>
+    `;
 
                     mapa.appendChild(div);
+                }
 
-                });
+
 
                 // Líneas + etiquetas de distancia
                 for (let i = 1; i < recorrido.length; i++) {
+
                     const c1 = recorrido[i - 1];
                     const c2 = recorrido[i];
 
@@ -245,39 +289,56 @@
                     const largo  = Math.sqrt(dx*dx + dy*dy);
                     const angulo = Math.atan2(dy, dx) * (180 / Math.PI);
 
-                    const linea = document.createElement("div");
-                    linea.className = "linea";
-                    linea.style.position = "absolute";
-                    linea.style.left = p1.x + "px";
-                    linea.style.top  = (p1.y + 25) + "px";
-                    linea.style.width = largo + "px";
-                    linea.style.height = "4px";
-                    linea.style.background = "#333";
-                    linea.style.borderRadius = "4px";
-                    linea.style.transformOrigin = "left center";
-                    linea.style.transform = `rotate(${angulo}deg) scaleX(0)`;
-                    linea.style.transition = "transform 0.8s ease-out";
-                    mapa.appendChild(linea);
+                    // ==== LÍNEA ====
+                    const curva = document.createElementNS("http://www.w3.org/2000/svg", "path");
 
-                    // disparar animación
+// punto de inicio
+                    const x1 = p1.x;
+                    const y1 = p1.y;
+
+// punto final
+                    const x2 = p2.x;
+                    const y2 = p2.y;
+
+// ✅ control para que la curva sea suave y salga del borde del nodo
+                    const curvaAltura = 60; // más grande = arco más pronunciado
+                    const cx = (x1 + x2) / 2;        // mitad del camino
+                    const cy = ((y1 + y2) / 2) - curvaAltura; // sube para hacer la curva convexa
+
+// path Bezier: M start, Q controlPoint, end
+                    const pathData = `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
+
+                    curva.setAttribute("d", pathData);
+                    curva.setAttribute("stroke", "#333");
+                    curva.setAttribute("fill", "transparent");
+                    curva.setAttribute("stroke-width", "3");
+                    curva.style.zIndex = "9000";
+
+// animación de curva "dibujándose"
+                    curva.style.strokeDasharray = "1000";
+                    curva.style.strokeDashoffset = "1000";
+                    curva.style.transition = "stroke-dashoffset 0.8s ease-out";
+
+                    svg.appendChild(curva);
+
+// dispara animación
                     requestAnimationFrame(() => {
-                        linea.style.transform = `rotate(${angulo}deg) scaleX(1)`;
+                        curva.style.strokeDashoffset = "0";
                     });
 
-                    // etiqueta distancia
+
+                    // ==== ETIQUETA DE DISTANCIA EN LA PARTE CONVEXA ====
                     const label = document.createElement("div");
                     label.className = "distancia-label";
                     label.textContent = textoDist;
+
                     label.style.position = "absolute";
-                    label.style.left = ((p1.x + p2.x) / 2) + "px";
-                    label.style.top  = ((p1.y + p2.y) / 2 + 8) + "px";
-                    label.style.transform = "translate(-50%, -50%)";
-                    label.style.fontSize = "14px";
-                    label.style.fontWeight = "600";
-                    label.style.background = "rgba(255,255,255,0.8)";
-                    label.style.padding = "2px 6px";
-                    label.style.borderRadius = "6px";
+                    label.style.left = cx + "px";      // usamos el control de la curva
+                    label.style.top  = (cy - 10) + "px";  // un poquito arriba para que se vea
+                    label.style.zIndex = "9995";
+
                     mapa.appendChild(label);
+
                 }
 
             } catch (e) {

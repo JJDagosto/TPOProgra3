@@ -1,10 +1,13 @@
 package com.yeito.tpoprogra.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.neo4j.core.schema.*;
 
 @Node("Paquete")
+@JsonIgnoreProperties({"origen", "destino"})
+
 public class Paquete {
 
     @Id
@@ -35,4 +38,3 @@ public class Paquete {
     public Ciudad getOrigen() { return origen; }
     public void setOrigen(Ciudad origen) { this.origen = origen; }
 }
-

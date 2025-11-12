@@ -19,11 +19,32 @@
     <p class="text-muted mb-5">Sistema de gestión de ciudades y rutas - Integrado con Neo4j</p>
 
     <div class="d-grid gap-3 col-md-6 mx-auto">
+        <!-- ✅ Módulos normales -->
         <a href="ciudades.html" class="btn btn-outline-primary btn-lg">🏙️ Gestionar Ciudades</a>
         <a href="rutas.html" class="btn btn-outline-success btn-lg">🛣️ Gestionar Rutas</a>
         <a href="camiones.html#cargar-camiones" class="btn btn-outline-info btn-lg">🔧 Gestionar Camiones</a>
-        <a href="mapa.html" class="btn btn-outline-secondary btn-lg">🗺️ Visualizar mapa</a>
-        <a href="#" class="btn btn-outline-danger btn-lg" onclick="enviarCamiones()">📤 Enviar Camiones</a>
+
+
+        <!-- ✅ Nuevo: mapa DFS -->
+        <a href="dfs.html" class="btn btn-outline-secondary btn-lg">Explorar mapa (DFS)</a>
+
+        <!-- ✅ Nuevo: mapa BFS -->
+        <a href="mapa_bfs.html" class="btn btn-outline-secondary btn-lg">🗺Explorar mapa (BFS)</a>
+
+        <!-- Nuevo: mapa Prim -->
+        <a href="mapa_prim.html" class="btn btn-outline-secondary btn-lg">Conectar ciudades con menor distancia (Prim)</a>
+
+        <!-- Nuevo: mapa Kruskal -->
+        <a href="mapa_kruskal.html" class="btn btn-outline-secondary btn-lg">Recorrido optimizado (Kruskal)</a>
+
+        <!-- Nuevo: Branch and Bound -->
+        <a href="mapa_branch_bound.html" class="btn btn-outline-secondary btn-lg">Ruta con limite de km (B&B)</a>
+
+        <!--Nuevo: Djikstra -->
+        <a href="mapa_dijkstra.html" class="btn btn-outline-secondary btn-lg">Mejor ruta entre ciudades (Dijkstra)</a>
+
+        <!-- Botón Enviar camiones -->
+        <button class="btn btn-outline-danger btn-lg" onclick="enviarCamiones()">📤 Enviar Camiones</button>
     </div>
 
     <hr class="my-5">

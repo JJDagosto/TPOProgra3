@@ -89,23 +89,10 @@ public class NeoService {
     }
 
     @Transactional
-    public Ruta crearRuta(Long idOrigen, Long idDestino, double distancia) {
-        Optional<Ciudad> origenOpt = CiudadRepository.findById(idOrigen);
-        Optional<Ciudad> destinoOpt = CiudadRepository.findById(idDestino);
-
-        if (origenOpt.isEmpty() || destinoOpt.isEmpty()) {
-            throw new RuntimeException("No se encontró una o ambas ciudades");
-        }
-
-        Ciudad origen = origenOpt.get();
-        Ciudad destino = destinoOpt.get();
-
-        Ruta ruta = new Ruta(distancia, origen, destino);
-        origen.getRutas().add(ruta);
-
-        CiudadRepository.save(origen);
-        return ruta;
+    public void crearRuta(Long idOrigen, Long idDestino, double distancia) {
+        RutaRepository.enlazarCiudades(idOrigen, idDestino, distancia);
     }
+
 
     public Ruta editarRuta(Long idRuta, double nuevaDistanciaKm) {
         // Buscamos la ruta
@@ -120,13 +107,10 @@ public class NeoService {
     }
 
     @Transactional
-    public boolean eliminarRuta(Long idRuta) {
-        if (RutaRepository.existsById(idRuta)) {
-            RutaRepository.deleteById(idRuta);
-            return true;
-        }
-        return false;
+    public void eliminarRuta(String origen, String destino) {
+        RutaRepository.borrarRuta(origen, destino);
     }
+
 
     public  Map<String, Map<String, Double>> importarGrafo() {
         Map<String, Map<String, Double>> grafo = new HashMap<>();
@@ -148,5 +132,38 @@ public class NeoService {
     public List<Paquete> getPaquetes() {
         return PaqueteRepository.findAll();
     }
+
+    // Obtener un paquete por ID
+    public Paquete getPaqueteById(Long id) {
+        try {
+            return PaqueteRepository.findById(id).orElse(null);
+        } catch (Exception e) {
+            System.out.println("❌ Error obteniendo paquete ID " + id + ": " + e.getMessage());
+            return null;
+        }
+    }
+
+    // Eliminar paquete por ID
+    public void deletePaquete(Long id) {
+        try {
+            PaqueteRepository.deleteById(id);
+            System.out.println("🗑️ Paquete eliminado ID " + id);
+        } catch (Exception e) {
+            System.out.println("❌ Error eliminando paquete ID " + id + ": " + e.getMessage());
+        }
+    }
+
+    public Double obtenerDistancia(String nombreOrigen, String nombreDestino) {
+        Ciudad origen = CiudadRepository.findByNombre(nombreOrigen).orElse(null);
+        if (origen == null) return null;
+
+        for (Ruta r : origen.getRutas()) {
+            if (r.getDestino() != null && r.getDestino().getNombre().equals(nombreDestino)) {
+                return r.getDistancia();
+            }
+        }
+        return null;
+    }
+
 
 }

@@ -36,7 +36,7 @@
           </select>
         </div>
         <div class="col-md-3">
-          <select id="destinoPaquete" class="form-select" disabled>
+          <select id="destinoPaquete" class="form-select">
             <option selected disabled>Seleccionar destino</option>
           </select>
         </div>
@@ -68,10 +68,8 @@
   <div class="card mb-4" id="cargar-camiones">
     <div class="card-header bg-secondary text-white">🔧 Cargar Camiones</div>
     <div class="card-body">
-
-      <p class="fw-bold">1) Elegí un camión:</p>
+      <p class="fw-bold">Elegí un camión:</p>
       <select id="selectCamion" class="form-select mb-3"></select>
-
       <div class="row g-3">
         <div class="col-md-6">
           <button class="btn btn-dark btn-full" id="btnManual">Carga Manual</button>
@@ -80,170 +78,255 @@
           <button class="btn btn-info btn-full text-white" id="btnAutomatico">Carga Automática</button>
         </div>
       </div>
-
       <div id="msgCarga" class="mt-3 fw-bold"></div>
 
-      <!-- PANEL MANUAL -->
       <div id="cargaManual" class="mt-4" style="display:none;">
         <hr>
         <h5>Seleccioná paquetes:</h5>
-        <p>Peso restante: <b id="pesoRestante"></b> kg</p>
-
+        <p>Peso restante: <b id="pesoRestante">0 kg</b></p>
         <div id="listaPaquetes" class="mt-3"></div>
-
-        <button class="btn btn-success mt-3 btn-full" id="btnConfirmarManual">Confirmar Carga</button>
+        <button id="btnConfirmarManual" class="btn btn-success mt-3 btn-full">Confirmar Carga</button>
+        <div id="msgCargaManual" class="mt-3 text-success fw-bold"></div>
       </div>
 
     </div>
   </div>
 </div>
 
-
-
 <script>
   const API = "http://localhost:8080/neo";
-  let paquetes = [];
-  let capacidad = 0;
-  let cargaActual = 0;
-  let seleccionados = [];
 
-  const selectCamion = document.getElementById("selectCamion");
-  const pesoRestanteEl = document.getElementById("pesoRestante");
-  const listaPaquetesEl = document.getElementById("listaPaquetes");
-  const msgCarga = document.getElementById("msgCarga");
+  // === CARGAR CIUDADES ===
+  async function cargarCiudades() {
+    try {
+      const res = await fetch(`${API}/ciudad/get/nombres`);
+      if (!res.ok) throw new Error("Error al obtener ciudades");
+      const ciudades = await res.json();
 
-  // Cargar camiones
-  async function cargarCamionesSelect() {
-    const res = await fetch(`${API}/camion`);
-    const data = await res.json();
+      const origenSel = document.getElementById("origenPaquete");
+      const destinoSel = document.getElementById("destinoPaquete");
 
-    selectCamion.innerHTML = data.length === 0
-            ? `<option disabled selected>No hay camiones creados</option>`
-            : data.map(c => `<option value="${c.id}" data-cap="${c.capacidad}" data-carga="${c.cargaActual}">
-        Camión ${c.id} - ${c.cargaActual}/${c.capacidad} kg
-      </option>`).join("");
+      // Limpiamos selects y agregamos placeholder
+      origenSel.innerHTML = '<option selected disabled>Seleccionar origen</option>';
+      destinoSel.innerHTML = '<option selected disabled>Seleccionar destino</option>';
+
+      // Cargamos todas las ciudades en el select de origen
+      ciudades.forEach(c => {
+        const option = document.createElement("option");
+        option.value = c;
+        option.textContent = c;
+        origenSel.appendChild(option);
+      });
+
+      // cuando cambia el origen, cargamos los destinos válidos
+      origenSel.addEventListener("change", async () => {
+        const origenSeleccionado = origenSel.value;
+
+        destinoSel.innerHTML = '<option selected disabled>Cargando destinos...</option>';
+        destinoSel.disabled = true;
+
+        try {
+          // Llamamos al DFS para obtener las ciudades alcanzables desde el origen
+          const resDFS = await fetch(`${API}/grafo/dfs?inicio=${encodeURIComponent(origenSeleccionado)}`);
+          if (!resDFS.ok) throw new Error("Error al obtener destinos");
+          const destinos = await resDFS.json();
+
+          // Limpiamos y agregamos las opciones reales
+          destinoSel.innerHTML = '<option selected disabled>Seleccionar destino</option>';
+          destinos
+                  .filter(d => d !== origenSeleccionado) // excluye el mismo origen
+                  .forEach(d => {
+                    const option = document.createElement("option");
+                    option.value = d;
+                    option.textContent = d;
+                    destinoSel.appendChild(option);
+                  });
+
+          destinoSel.disabled = false;
+        } catch (err) {
+          console.error("Error cargando destinos:", err);
+          destinoSel.innerHTML = '<option selected disabled>Error al cargar</option>';
+        }
+      });
+
+    } catch (e) {
+      console.error("Error cargando ciudades:", e);
+    }
   }
-  cargarCamionesSelect();
 
-  // Crear paquete
+  cargarCiudades();
+  cargarCiudades();
+
+  // === CREAR PAQUETE ===
   document.getElementById("btnCrearPaquete").addEventListener("click", async () => {
-    const peso = pesoPaquete.value;
-    const origen = origenPaquete.value;
-    const destino = destinoPaquete.value;
-    if (!peso || !origen || !destino) return alert("Completá los datos");
+    const peso = document.getElementById("pesoPaquete").value;
+    const origen = document.getElementById("origenPaquete").value;
+    const destino = document.getElementById("destinoPaquete").value;
 
-    const res = await fetch(`${API}/paquete?peso=${peso}&origen=${origen}&destino=${destino}`, { method:"POST" });
+    if (!peso || !origen || !destino) return alert("Completá los datos del paquete.");
+
+    const res = await fetch(`${API}/paquete?peso=${peso}&origen=${origen}&destino=${destino}`, { method: "POST" });
     document.getElementById("msgCrearPaquete").innerText = await res.text();
-    pesoPaquete.value=""; destinoPaquete.value=""; origenPaquete.value="";
   });
 
-  // Crear camión
+  // === CREAR CAMIÓN ===
   document.getElementById("btnCrearCamion").addEventListener("click", async () => {
-    const cap = capacidadCamion.value;
+    const cap = document.getElementById("capacidadCamion").value;
     if (!cap) return alert("Ingresá capacidad");
-    const res = await fetch(`${API}/camion?capacidad=${cap}`, { method:"POST" });
+
+    const res = await fetch(`${API}/camion?capacidad=${cap}`, { method: "POST" });
     document.getElementById("msgCrearCamion").innerText = await res.text();
-    capacidadCamion.value="";
-    cargarCamionesSelect();
   });
 
-  // Carga Manual
-  document.getElementById("btnManual").addEventListener("click", async () => {
-    if (!selectCamion.value) return alert("Seleccioná camión");
 
-    capacidad = Number(selectCamion.selectedOptions[0].dataset.cap);
-    cargaActual = Number(selectCamion.selectedOptions[0].dataset.carga);
-    seleccionados = [];
+  // === CARGAR CAMIONES ===
+  async function cargarCamiones() {
+    try {
+      const res = await fetch(`${API}/camion/list`);
+      const camiones = await res.json();
 
-    const res = await fetch(`${API}/paquetes/sort`);
-    paquetes = await res.json();
+      const selectCamion = document.getElementById("selectCamion");
+      selectCamion.innerHTML = '<option disabled selected>Seleccionar camión</option>';
 
-    renderPaquetes();
-    actualizarPesoRestante();
-    cargaManual.style.display="block";
-  });
+      camiones.forEach(c => {
+        const option = document.createElement("option");
+        option.value = c.id;
+        option.textContent = c.texto;
 
-  function renderPaquetes() {
-    listaPaquetesEl.innerHTML = paquetes.map(p => `
-    <div>
-      <input type="checkbox" class="chk" data-id="${p.id}" data-peso="${p.peso}">
-      ${p.peso}kg - ${p.origen.nombre} → ${p.destino.nombre}
-    </div>
-  `).join("");
-
-    document.querySelectorAll(".chk").forEach(chk => {
-      chk.addEventListener("change", () => {
-        const peso = Number(chk.dataset.peso);
-
-        if (chk.checked) {
-          cargaActual += peso;
-          seleccionados.push(Number(chk.dataset.id));
-        } else {
-          cargaActual -= peso;
-          seleccionados = seleccionados.filter(id => id !== Number(chk.dataset.id));
+        // Extraer capacidad y carga actual del texto del toString()
+        const match = c.texto.match(/(\d+)\s*\|\s*(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)kg/);
+        if (match) {
+          const [, id, cargaActual, capacidad] = match;
+          option.dataset.carga = parseFloat(cargaActual);
+          option.dataset.cap = parseFloat(capacidad);
         }
 
-        actualizarPesoRestante();
+
+
+        selectCamion.appendChild(option);
       });
-    });
+
+    } catch (err) {
+      console.error("Error cargando camiones:", err);
+    }
   }
 
-  function actualizarPesoRestante() {
-    const restante = capacidad - cargaActual;
-    pesoRestanteEl.innerText = restante;
-    pesoRestanteEl.classList.toggle("text-danger", restante < 0);
-    listaPaquetesEl.classList.toggle("overload", restante < 0);
-  }
+  cargarCamiones();
 
-  // Confirmar manual
-  document.getElementById("btnConfirmarManual").addEventListener("click", async () => {
-    if (capacidad - cargaActual < 0) {
-      alert("Te pasaste del peso, deseleccioná paquetes.");
+  // === CARGA AUTOMÁTICA (dp) ===
+  document.getElementById("btnAutomatico").addEventListener("click", async () => {
+    const selectCamion = document.getElementById("selectCamion");
+    const msgCarga = document.getElementById("msgCarga");
+
+    if (!selectCamion.value) {
+      alert("Seleccioná un camión antes de cargarlo.");
       return;
     }
+
     const camionId = selectCamion.value;
 
-    const body = {
-      id: camionId,
-      capacidad: capacidad,
-      cargaActual: cargaActual,
-      paquetes: seleccionados.map(id => ({ id }))
+    msgCarga.innerText = "⏳ Cargando camión de forma óptima...";
+
+    try {
+      const res = await fetch(`${API}/camion/cargar?camionId=${camionId}`, {
+        method: "POST",
+      });
+
+      const texto = await res.text();
+      msgCarga.innerText = texto;
+      cargarCamiones(); // refrescar
+    } catch (err) {
+      console.error("Error cargando camión:", err);
+      msgCarga.innerText = "❌ Error al cargar el camión.";
+    }
+  });
+
+  document.getElementById("btnManual").addEventListener("click", async () => {
+    const selectCamion = document.getElementById("selectCamion");
+    if (!selectCamion.value) return alert("Seleccioná un camión");
+
+    const camionId = selectCamion.value;
+    const capacidad = parseFloat(selectCamion.selectedOptions[0].dataset.cap);
+    let cargaActual = parseFloat(selectCamion.selectedOptions[0].dataset.carga);
+
+    // Obtener paquetes ordenados
+    const res = await fetch(`${API}/paquetes/sort`, { method: "POST" });
+    const paquetes = await res.json();
+
+    const contenedor = document.getElementById("listaPaquetes");
+    const pesoRestante = document.getElementById("pesoRestante");
+    const btnConfirmar = document.getElementById("btnConfirmarManual");
+
+    contenedor.innerHTML = "";
+    let seleccionados = [];
+
+    const actualizarPeso = () => {
+      const totalSeleccionado = seleccionados.reduce((s, p) => s + p.peso, 0);
+      console.log("capacidad:", capacidad, "cargaActual:", cargaActual, "totalSeleccionado:", totalSeleccionado);      const restante = capacidad - (cargaActual + totalSeleccionado);
+      pesoRestante.innerText = `${restante.toFixed(2)} kg`;
+      pesoRestante.style.color = restante < 0 ? "red" : "green";
+      btnConfirmar.disabled = restante < 0;
     };
 
-    const res = await fetch(`${API}/camion/cargarManual`, {
-      method: "PUT",
-      headers: { "Content-Type":"application/json" },
-      body: JSON.stringify(body)
-    });
+    // Render dinámico a partir del Map
+    for (const p of paquetes.sort((a, b) => a.peso - b.peso)) {
+      // Llamamos a tu endpoint para obtener el texto formateado
+      const textoRes = await fetch(`${API}/paquete/aTexto?ID=${p.id}`);
+      const texto = await textoRes.text();
 
-    msgCarga.innerText = await res.text();
+      const div = document.createElement("div");
+      div.innerHTML = `
+    <input type="checkbox" id="p${p.id}" data-id="${p.id}" data-peso="${p.peso}">
+    <label for="p${p.id}">${texto}</label>
+  `;
+      contenedor.appendChild(div);
 
-    // ELIMINAR paquetes cargados
-    for (const id of seleccionados) {
-      await fetch(`${API}/paquete/${id}`, { method:"DELETE" });
+      div.querySelector("input").addEventListener("change", e => {
+        const idSel = parseInt(e.target.dataset.id);
+        const pesoSel = parseFloat(e.target.dataset.peso);
+
+        if (e.target.checked) {
+          seleccionados.push({ id: idSel, peso: pesoSel });
+        } else {
+          seleccionados = seleccionados.filter(x => x.id !== idSel);
+        }
+        actualizarPeso();
+      });
     }
 
-    cargaManual.style.display="none";
-    cargarCamionesSelect();
+    // Confirmar carga
+    btnConfirmar.onclick = async () => {
+      if (seleccionados.length === 0) {
+        alert("Seleccioná al menos un paquete.");
+        return;
+      }
+
+      const body = {
+        id: camionId,
+        paquetes: seleccionados.map(x => x.id)
+      };
+
+      const res = await fetch(`${API}/camion/cargarManual`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      const msg = await res.text();
+      document.getElementById("msgCarga").innerText = msg;
+      contenedor.innerHTML = "";
+      pesoRestante.innerText = "";
+    };
+
+    actualizarPeso();
+    document.getElementById("cargaManual").style.display = "block";
   });
 
-  // Automático
-  document.getElementById("btnAutomatico").addEventListener("click", async () => {
-    if (!selectCamion.value) return alert("Seleccioná camión");
 
-    const camionId = selectCamion.value;
-    const res = await fetch(`${API}/camion/cargar?camionId=${camionId}`, { method:"POST" });
-    msgCarga.innerText = await res.text();
 
-    // eliminar paquetes cargados por DP
-    const resPaquetes = await fetch(`${API}/paquetes/sort`);
-    const paqs = await resPaquetes.json();
-    for (const p of paqs) {
-      if (p.cargado === true) await fetch(`${API}/paquete/${p.id}`, {method:"DELETE"});
-    }
 
-    cargarCamionesSelect();
-  });
+
 </script>
+
 </body>
 </html>

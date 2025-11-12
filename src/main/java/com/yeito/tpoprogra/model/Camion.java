@@ -1,5 +1,6 @@
 package com.yeito.tpoprogra.model;
 
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.neo4j.core.schema.*;
 import java.util.HashSet;
 import java.util.Set;
@@ -14,16 +15,23 @@ public class Camion {
     private double capacidad;
     private double cargaActual;
 
-    @Relationship(type = "TRANSPORTA")
+    @Transient
     private Set<Paquete> paquetes = new HashSet<>();
 
+
+    @Transient
     private Set<Ciudad> destinos = new HashSet<>();
+
 
     public Camion() {}
 
     public Camion(double capacidad) {
         this.capacidad = capacidad;
         this.cargaActual = 0.0;
+    }
+
+    public Long getId() {
+        return id;
     }
 
     public double getCapacidad() { return capacidad; }

@@ -4,57 +4,291 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizar Mapa - Logísticas PEPE</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>.loader{display:none;width:50px}</style>
+
+    <style>
+        /* ==== ANIMACIONES ==== */
+
+        .nodo {
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+
+
+        .linea {
+            position: absolute;
+            height: 4px;
+            background: #333;
+            border-radius: 4px;
+            transform-origin: left center;
+            transform: scaleX(0);
+            transition: transform 0.8s ease-out;
+        }
+
+        #loader {
+            font-size: 22px;
+            text-align: center;
+            margin-top: 25px;
+            display: none;
+        }
+
+        #mapa {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #222;
+            background: #e9ecef;
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+
+        .nodo {
+            position: absolute;
+            text-align: center;
+            transform: translate(-50%, -50%);
+            transition: transform 0.2s ease;
+        }
+        .nodo:hover {
+            transform: translate(-50%, -50%) scale(1.08);
+        }
+
+
+        .nodo img {
+            width: 40px;   /* Aca pones el tamaño del PNG */
+            height: 40px;
+            display: block;
+            margin: auto;
+        }
+
+        .nodo span {
+            background: #0d6efd;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 13px;
+            display: inline-block;
+            margin-top: 3px;
+        }            transition: transform 0.2s ease;
+
+        .linea {
+            position: absolute;
+            height: 3px;
+            background: #333;
+            transform-origin: 0 0;
+            border-radius: 3px;
+        }
+
+        .distancia-label {
+            position: absolute;
+            background: yellow;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            transform: translate(-50%, -50%);
+        }
+
+    </style>
 </head>
 <body class="bg-light">
 
-<nav class="navbar navbar-dark bg-secondary">
+<nav class="navbar navbar-dark bg-dark mb-4">
     <div class="container-fluid">
         <a class="navbar-brand" href="index.html">← Volver | Logísticas PEPE</a>
+        <span class="navbar-text text-white">🗺️ Visualizar Mapa</span>
     </div>
 </nav>
 
-<div class="container mt-5">
-    <h2 class="text-center mb-4">🗺️ Visualizar mapa (BFS)</h2>
-    <div class="card">
-        <div class="card-header bg-secondary text-white">Seleccionar ciudad</div>
-        <div class="card-body">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-6">
-                    <label class="form-label">Ciudad</label>
-                    <input type="text" id="ciudadMapa" class="form-control" placeholder="Ej: Buenos Aires">
-                </div>
-                <div class="col-md-3">
-                    <button class="btn btn-secondary w-100" id="btnBFS">Mostrar conexiones (BFS)</button>
-                </div>
-                <div class="col-md-3">
-                    <img id="loaderBFS" src="imgs/camionCargando.gif" class="loader">
-                </div>
-            </div>
-            <div id="resultadoBFS" class="mt-3"></div>
+<div class="container">
+    <h3 class="text-center mb-3">Rutas disponibles desde una ciudad</h3>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <select id="selectCiudad" class="form-select">
+                <option selected disabled>Elegir ciudad...</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <button id="btnMostrar" class="btn btn-primary w-100">Mostrar mapa</button>
         </div>
     </div>
+
+    <div id="loader">⏳ Calculando rutas...</div>
+    <div id="mapa" style="position:relative; width:100%; height:400px; border:1px solid #ddd;"></div>
+
+
 </div>
 
 <script>
-    const API = "http://localhost:8080/neo";
-    document.getElementById("btnBFS").addEventListener("click", async () => {
-        const ciudad = document.getElementById("ciudadMapa").value.trim();
-        const loader = document.getElementById("loaderBFS");
-        loader.style.display = "block";
-        if (!ciudad) { document.getElementById("resultadoBFS").innerText = "Ingresá una ciudad."; loader.style.display="none"; return; }
-        try {
-            const res = await fetch(`${API}/grafo/bfs?inicio=${encodeURIComponent(ciudad)}`);
-            if (!res.ok) throw new Error("Backend no disponible");
-            const data = await res.json();
-            document.getElementById("resultadoBFS").innerHTML = `Conexiones desde <b>${ciudad}</b>: ${data.join(" → ")}`;
-        } catch(e) {
-            document.getElementById("resultadoBFS").innerHTML = "⚠️ Ejemplo (mock): CiudadA → CiudadB → CiudadC";
-        } finally {
-            loader.style.display = "none";
+    document.addEventListener("DOMContentLoaded", () => {
+        const API = "http://localhost:8080/neo";
+
+        // ===== Refs del DOM =====
+        const selectCiudad = document.getElementById("selectCiudad"); // <select id="selectCiudad">
+        const btnMostrar   = document.getElementById("btnMostrar");   // <button id="btnMostrar">
+        const mapa         = document.getElementById("mapa");         // <div id="mapa">
+        const loader       = document.getElementById("loader");       // <div id="loader">
+
+        // ===== Cargar ciudades en el <select> =====
+        async function cargarCiudades() {
+            try {
+                const res = await fetch(`${API}/ciudad/get/nombres`, { cache: "no-store" });
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                const data = await res.json();
+
+                // limpiar y placeholder
+                selectCiudad.innerHTML = "";
+                const ph = document.createElement("option");
+                ph.disabled = true; ph.selected = true;
+                ph.textContent = "Elegir ciudad...";
+                selectCiudad.appendChild(ph);
+
+                // opciones
+                data.forEach(c => {
+                    const opt = document.createElement("option");
+                    opt.value = c;
+                    opt.textContent = c;
+                    selectCiudad.appendChild(opt);
+                });
+            } catch (e) {
+                console.error("Error cargando ciudades:", e);
+                selectCiudad.innerHTML = "";
+                const err = document.createElement("option");
+                err.disabled = true; err.selected = true;
+                err.textContent = "Error al cargar ciudades";
+                selectCiudad.appendChild(err);
+            }
         }
+        cargarCiudades();
+
+        // ===== Mostrar mapa (DFS) =====
+        btnMostrar.addEventListener("click", async () => {
+            const origen = selectCiudad.value;
+            if (!origen || selectCiudad.selectedIndex === 0) {
+                alert("Elegí una ciudad");
+                return;
+            }
+
+            mapa.innerHTML = "";
+            loader.style.display = "block";
+
+            try {
+                const res = await fetch(`${API}/grafo/dfs?inicio=${encodeURIComponent(origen)}`, { cache: "no-store" });
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                const recorrido = await res.json();
+
+                loader.style.display = "none";
+
+                if (!Array.isArray(recorrido) || recorrido.length < 2) {
+                    mapa.innerHTML = "<h5 class='text-center mt-4'>No hay rutas desde esta ciudad</h5>";
+                    return;
+                }
+
+                const ancho = mapa.clientWidth || 800;
+                const alto  = mapa.clientHeight || 300;
+
+                const nodosPos = {};
+
+                // Distribución horizontal tipo camino
+                recorrido.forEach((ciudad, i) => {
+                    const x = (ancho / (recorrido.length + 1)) * (i + 1);
+                    const y = alto * 0.5;
+                    nodosPos[ciudad] = { x, y };
+
+                    const div = document.createElement("div");
+                    div.className = "nodo";
+                    div.style.position = "absolute";
+                    div.style.left = x + "px";
+                    div.style.top  = y + "px";
+                    div.style.zIndex = "9999";
+                    div.style.transform = "translate(-50%, -50%)";
+                    div.style.background = "rgba(255,255,255,0.9)";
+                    div.style.border = "1px solid #333";
+                    div.style.color = "#000";
+                    div.style.padding = "6px";
+                    div.style.borderRadius = "8px";
+                    div.style.fontSize = "14px";
+                    div.style.display = "flex";
+                    div.style.flexDirection = "column";
+                    div.style.alignItems = "center";
+                    div.style.gap = "4px";
+
+                    div.innerHTML = `
+  <img src="imgs/ubicaciones.png" width="40" height="40" alt="Ciudad">
+  <span>${ciudad}</span>
+`;
+
+                    mapa.appendChild(div);
+
+                });
+
+                // Líneas + etiquetas de distancia
+                for (let i = 1; i < recorrido.length; i++) {
+                    const c1 = recorrido[i - 1];
+                    const c2 = recorrido[i];
+
+                    // distancia
+                    let textoDist = "?? km";
+                    try {
+                        const rd = await fetch(`${API}/ruta/distancia?origen=${encodeURIComponent(c1)}&destino=${encodeURIComponent(c2)}`, { cache: "no-store" });
+                        if (rd.ok) {
+                            const dist = await rd.json();
+                            if (typeof dist === "number") textoDist = `${dist} km`;
+                        }
+                    } catch {}
+
+                    const p1 = nodosPos[c1];
+                    const p2 = nodosPos[c2];
+
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const largo  = Math.sqrt(dx*dx + dy*dy);
+                    const angulo = Math.atan2(dy, dx) * (180 / Math.PI);
+
+                    const linea = document.createElement("div");
+                    linea.className = "linea";
+                    linea.style.position = "absolute";
+                    linea.style.left = p1.x + "px";
+                    linea.style.top  = (p1.y + 25) + "px";
+                    linea.style.width = largo + "px";
+                    linea.style.height = "4px";
+                    linea.style.background = "#333";
+                    linea.style.borderRadius = "4px";
+                    linea.style.transformOrigin = "left center";
+                    linea.style.transform = `rotate(${angulo}deg) scaleX(0)`;
+                    linea.style.transition = "transform 0.8s ease-out";
+                    mapa.appendChild(linea);
+
+                    // disparar animación
+                    requestAnimationFrame(() => {
+                        linea.style.transform = `rotate(${angulo}deg) scaleX(1)`;
+                    });
+
+                    // etiqueta distancia
+                    const label = document.createElement("div");
+                    label.className = "distancia-label";
+                    label.textContent = textoDist;
+                    label.style.position = "absolute";
+                    label.style.left = ((p1.x + p2.x) / 2) + "px";
+                    label.style.top  = ((p1.y + p2.y) / 2 + 8) + "px";
+                    label.style.transform = "translate(-50%, -50%)";
+                    label.style.fontSize = "14px";
+                    label.style.fontWeight = "600";
+                    label.style.background = "rgba(255,255,255,0.8)";
+                    label.style.padding = "2px 6px";
+                    label.style.borderRadius = "6px";
+                    mapa.appendChild(label);
+                }
+
+            } catch (e) {
+                console.error(e);
+                loader.style.display = "none";
+                mapa.innerHTML = "<h5 class='text-center mt-4'>No se pudo calcular el mapa</h5>";
+            }
+        });
+
     });
 </script>
+
 </body>
 </html>

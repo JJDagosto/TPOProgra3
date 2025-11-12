@@ -149,4 +149,25 @@ public class NeoService {
         return PaqueteRepository.findAll();
     }
 
+    // ✅ Obtener un paquete por ID
+    public Paquete getPaqueteById(Long id) {
+        try {
+            return PaqueteRepository.findById(id).orElse(null);
+        } catch (Exception e) {
+            System.out.println("❌ Error obteniendo paquete ID " + id + ": " + e.getMessage());
+            return null;
+        }
+    }
+
+    // ✅ Eliminar paquete por ID
+    public void deletePaquete(Long id) {
+        try {
+            PaqueteRepository.deleteById(id);
+            System.out.println("🗑️ Paquete eliminado ID " + id);
+        } catch (Exception e) {
+            System.out.println("❌ Error eliminando paquete ID " + id + ": " + e.getMessage());
+        }
+    }
+
+
 }

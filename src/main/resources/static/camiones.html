@@ -3,9 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Carga de Camiones - Logísticas PEPE</title>
+  <title>Cargar Camiones - Logísticas PEPE</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>.loader { display:none; width:50px; }</style>
+  <style>
+    .loader { width: 40px; display:none }
+    .overload { background-color: #ffb3b3; }
+    .btn-full { width:100%; }
+  </style>
 </head>
 <body class="bg-light">
 
@@ -16,175 +20,312 @@
 </nav>
 
 <div class="container mt-5">
-  <h2 class="text-center mb-4">🚚 Cargar Camiones</h2>
-  <p class="text-center text-muted mb-4">Capacidad fija por camión: <b>1000 kg</b></p>
+  <h2 class="text-center mb-4">🚚 Gestión de Camiones</h2>
 
-  <!-- Form simple: un paquete por vez -->
-  <div class="card mb-4">
-    <div class="card-header bg-dark text-white">Nuevo paquete</div>
+  <!-- =================== CREAR PAQUETE =================== -->
+  <div class="card mb-4" id="crear-paquete">
+    <div class="card-header bg-primary text-white">📦 Crear Paquete</div>
     <div class="card-body">
       <div class="row g-3 align-items-end">
-        <div class="col-md-4">
-          <label class="form-label">Peso (kg)</label>
-          <input type="number" id="pesoPaquete" class="form-control" placeholder="Ej: 120" min="1" required>
+        <div class="col-md-3">
+          <input type="number" id="pesoPaquete" class="form-control" placeholder="Peso (kg)">
         </div>
-        <div class="col-md-4">
-          <label class="form-label">Ciudad destino</label>
-          <input type="text" id="ciudadDestino" class="form-control" placeholder="Ej: Rosario" required>
+        <div class="col-md-3">
+          <select id="origenPaquete" class="form-select">
+            <option selected disabled>Seleccionar origen</option>
+          </select>
         </div>
-        <div class="col-md-4 d-grid gap-2">
-          <button class="btn btn-success" id="btnDP">Carga automática (Prog. Dinámica)</button>
-          <button class="btn btn-warning" id="btnDyV">Carga manual (Divide y vencerás)</button>
+        <div class="col-md-3">
+          <select id="destinoPaquete" class="form-select">
+            <option selected disabled>Seleccionar destino</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <button class="btn btn-primary btn-full" id="btnCrearPaquete">Crear Paquete</button>
         </div>
       </div>
-      <div class="mt-2 small text-muted">Se crearán camiones automáticamente si no entra en los existentes.</div>
+      <div id="msgCrearPaquete" class="mt-2 text-success"></div>
     </div>
   </div>
 
-  <!-- Ver mapa (DFS) muy simple -->
-  <div class="card mb-4">
-    <div class="card-header bg-info text-white fw-bold">🗺️ Ver mapa (DFS)</div>
+  <!-- =================== CREAR CAMION =================== -->
+  <div class="card mb-4" id="crear-camion">
+    <div class="card-header bg-success text-white">🚛 Crear Camión</div>
     <div class="card-body">
-      <button class="btn btn-info text-white" id="btnDFS">Mostrar recorrido desde la ciudad destino</button>
-      <img id="loaderDFS" src="imgs/camionCargando.gif" class="loader ms-2" style="display:none;width:40px">
-      <div id="msgDFS" class="mt-2"></div>
+      <div class="row g-3 align-items-end">
+        <div class="col-md-8">
+          <input type="number" id="capacidadCamion" class="form-control" placeholder="Capacidad (kg)">
+        </div>
+        <div class="col-md-4">
+          <button class="btn btn-success btn-full" id="btnCrearCamion">Crear Camión</button>
+        </div>
+      </div>
+      <div id="msgCrearCamion" class="mt-2 text-success"></div>
     </div>
   </div>
 
-  <!-- Estado actual -->
-  <div class="card">
-    <div class="card-header bg-light">Estado de camiones</div>
+  <!-- =================== CARGAR CAMIONES =================== -->
+  <div class="card mb-4" id="cargar-camiones">
+    <div class="card-header bg-secondary text-white">🔧 Cargar Camiones</div>
     <div class="card-body">
-      <div id="estadoCamiones" class="table-responsive"></div>
+      <p class="fw-bold">Elegí un camión:</p>
+      <select id="selectCamion" class="form-select mb-3"></select>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <button class="btn btn-dark btn-full" id="btnManual">Carga Manual</button>
+        </div>
+        <div class="col-md-6">
+          <button class="btn btn-info btn-full text-white" id="btnAutomatico">Carga Automática</button>
+        </div>
+      </div>
+      <div id="msgCarga" class="mt-3 fw-bold"></div>
+
+      <div id="cargaManual" class="mt-4" style="display:none;">
+        <hr>
+        <h5>Seleccioná paquetes:</h5>
+        <p>Peso restante: <b id="pesoRestante">0 kg</b></p>
+        <div id="listaPaquetes" class="mt-3"></div>
+        <button id="btnConfirmarManual" class="btn btn-success mt-3 btn-full">Confirmar Carga</button>
+        <div id="msgCargaManual" class="mt-3 text-success fw-bold"></div>
+      </div>
+
     </div>
   </div>
 </div>
 
-
 <script>
   const API = "http://localhost:8080/neo";
 
-  // ======= Config =======
-  const CAPACIDAD_CAMION = 1000; // <- fija (podés cambiar el número si querés)
+  // === CARGAR CIUDADES ===
+  async function cargarCiudades() {
+    try {
+      const res = await fetch(`${API}/ciudad/get/nombres`);
+      if (!res.ok) throw new Error("Error al obtener ciudades");
+      const ciudades = await res.json();
 
-  // ======= Estado en memoria (front) =======
-  let camiones = []; // [{id, carga, capacidad, paquetes:[{peso, ciudad}]}]
-  let nextId = 1;
+      const origenSel = document.getElementById("origenPaquete");
+      const destinoSel = document.getElementById("destinoPaquete");
 
-  const pesoEl = document.getElementById("pesoPaquete");
-  const ciudadEl = document.getElementById("ciudadDestino");
-  const estadoEl = document.getElementById("estadoCamiones");
+      // Limpiamos selects y agregamos placeholder
+      origenSel.innerHTML = '<option selected disabled>Seleccionar origen</option>';
+      destinoSel.innerHTML = '<option selected disabled>Seleccionar destino</option>';
 
-  function crearCamion() {
-    const nuevo = { id: nextId++, carga: 0, capacidad: CAPACIDAD_CAMION, paquetes: [] };
-    camiones.push(nuevo);
-    return nuevo;
+      // Cargamos todas las ciudades en el select de origen
+      ciudades.forEach(c => {
+        const option = document.createElement("option");
+        option.value = c;
+        option.textContent = c;
+        origenSel.appendChild(option);
+      });
+
+      // 🔹 Evento: cuando cambia el origen, cargamos los destinos válidos
+      origenSel.addEventListener("change", async () => {
+        const origenSeleccionado = origenSel.value;
+
+        destinoSel.innerHTML = '<option selected disabled>Cargando destinos...</option>';
+        destinoSel.disabled = true;
+
+        try {
+          // Llamamos al DFS para obtener las ciudades alcanzables desde el origen
+          const resDFS = await fetch(`${API}/grafo/dfs?inicio=${encodeURIComponent(origenSeleccionado)}`);
+          if (!resDFS.ok) throw new Error("Error al obtener destinos");
+          const destinos = await resDFS.json();
+
+          // Limpiamos y agregamos las opciones reales
+          destinoSel.innerHTML = '<option selected disabled>Seleccionar destino</option>';
+          destinos
+                  .filter(d => d !== origenSeleccionado) // excluye el mismo origen
+                  .forEach(d => {
+                    const option = document.createElement("option");
+                    option.value = d;
+                    option.textContent = d;
+                    destinoSel.appendChild(option);
+                  });
+
+          destinoSel.disabled = false;
+        } catch (err) {
+          console.error("Error cargando destinos:", err);
+          destinoSel.innerHTML = '<option selected disabled>Error al cargar</option>';
+        }
+      });
+
+    } catch (e) {
+      console.error("Error cargando ciudades:", e);
+    }
   }
 
-  function render() {
-    if (camiones.length === 0) {
-      estadoEl.innerHTML = `<div class="text-muted">No hay camiones cargados todavía.</div>`;
+  cargarCiudades();
+  cargarCiudades();
+
+  // === CREAR PAQUETE ===
+  document.getElementById("btnCrearPaquete").addEventListener("click", async () => {
+    const peso = document.getElementById("pesoPaquete").value;
+    const origen = document.getElementById("origenPaquete").value;
+    const destino = document.getElementById("destinoPaquete").value;
+
+    if (!peso || !origen || !destino) return alert("Completá los datos del paquete.");
+
+    const res = await fetch(`${API}/paquete?peso=${peso}&origen=${origen}&destino=${destino}`, { method: "POST" });
+    document.getElementById("msgCrearPaquete").innerText = await res.text();
+  });
+
+  // === CREAR CAMIÓN ===
+  document.getElementById("btnCrearCamion").addEventListener("click", async () => {
+    const cap = document.getElementById("capacidadCamion").value;
+    if (!cap) return alert("Ingresá capacidad");
+
+    const res = await fetch(`${API}/camion?capacidad=${cap}`, { method: "POST" });
+    document.getElementById("msgCrearCamion").innerText = await res.text();
+  });
+
+
+  // === CARGAR CAMIONES ===
+  async function cargarCamiones() {
+    try {
+      const res = await fetch(`${API}/camion/list`);
+      const camiones = await res.json();
+
+      const selectCamion = document.getElementById("selectCamion");
+      selectCamion.innerHTML = '<option disabled selected>Seleccionar camión</option>';
+
+      camiones.forEach(c => {
+        const option = document.createElement("option");
+        option.value = c.id;
+        option.textContent = c.texto;
+
+        // 🔹 Extraer capacidad y carga actual del texto del toString()
+        const match = c.texto.match(/(\d+)\s*\|\s*(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)kg/);
+        if (match) {
+          const [, id, cargaActual, capacidad] = match;
+          option.dataset.carga = parseFloat(cargaActual);
+          option.dataset.cap = parseFloat(capacidad);
+        }
+
+
+
+        selectCamion.appendChild(option);
+      });
+
+    } catch (err) {
+      console.error("Error cargando camiones:", err);
+    }
+  }
+
+  cargarCamiones();
+
+  // === CARGA AUTOMÁTICA (Knapsack) ===
+  document.getElementById("btnAutomatico").addEventListener("click", async () => {
+    const selectCamion = document.getElementById("selectCamion");
+    const msgCarga = document.getElementById("msgCarga");
+
+    if (!selectCamion.value) {
+      alert("Seleccioná un camión antes de cargarlo.");
       return;
     }
-    let html = `
-      <table class="table table-sm align-middle">
-        <thead>
-          <tr>
-            <th>#</th><th>Carga usada</th><th>Capacidad</th><th>Restante</th><th>Paquetes</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${camiones.map(c => `
-            <tr>
-              <td>Camión ${c.id}</td>
-              <td>${c.carga} kg</td>
-              <td>${c.capacidad} kg</td>
-              <td>${c.capacidad - c.carga} kg</td>
-              <td>${c.paquetes.map(p => `${p.peso}kg→${p.ciudad}`).join(", ") || "-"}</td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    `;
-    estadoEl.innerHTML = html;
-  }
 
-  function leerInputs() {
-    const peso = Number(pesoEl.value);
-    const ciudad = (ciudadEl.value || "").trim();
-    if (!peso || peso <= 0 || !ciudad) return null;
-    return { peso, ciudad };
-  }
+    const camionId = selectCamion.value; // ✅ Ahora ya es el número limpio
 
-  // ======= Heurísticas simples =======
-  // DP (mock): Best-Fit -> el camión con MENOR espacio sobrante donde entra
-  function colocarDP(paquete) {
-    let mejor = null;
-    let mejorSobrante = Infinity;
-    for (const c of camiones) {
-      const sobrante = c.capacidad - (c.carga + paquete.peso);
-      if (sobrante >= 0 && sobrante < mejorSobrante) {
-        mejor = c; mejorSobrante = sobrante;
-      }
+    msgCarga.innerText = "⏳ Cargando camión de forma óptima...";
+
+    try {
+      const res = await fetch(`${API}/camion/cargar?camionId=${camionId}`, {
+        method: "POST",
+      });
+
+      const texto = await res.text();
+      msgCarga.innerText = texto;
+      cargarCamiones(); // refrescar
+    } catch (err) {
+      console.error("Error cargando camión:", err);
+      msgCarga.innerText = "❌ Error al cargar el camión.";
     }
-    if (!mejor) mejor = crearCamion();
-    mejor.paquetes.push(paquete);
-    mejor.carga += paquete.peso;
-  }
+  });
 
-  // Divide y vencerás (mock): First-Fit -> primer camión donde entra
-  function colocarDyV(paquete) {
-    for (const c of camiones) {
-      if (c.carga + paquete.peso <= c.capacidad) {
-        c.paquetes.push(paquete);
-        c.carga += paquete.peso;
+  document.getElementById("btnManual").addEventListener("click", async () => {
+    const selectCamion = document.getElementById("selectCamion");
+    if (!selectCamion.value) return alert("Seleccioná un camión");
+
+    const camionId = selectCamion.value;
+    const capacidad = parseFloat(selectCamion.selectedOptions[0].dataset.cap);
+    let cargaActual = parseFloat(selectCamion.selectedOptions[0].dataset.carga);
+
+    // 📦 Obtener paquetes ordenados
+    const res = await fetch(`${API}/paquetes/sort`, { method: "POST" });
+    const paquetes = await res.json();
+
+    const contenedor = document.getElementById("listaPaquetes");
+    const pesoRestante = document.getElementById("pesoRestante");
+    const btnConfirmar = document.getElementById("btnConfirmarManual");
+
+    contenedor.innerHTML = "";
+    let seleccionados = [];
+
+    const actualizarPeso = () => {
+      const totalSeleccionado = seleccionados.reduce((s, p) => s + p.peso, 0);
+      console.log("capacidad:", capacidad, "cargaActual:", cargaActual, "totalSeleccionado:", totalSeleccionado);      const restante = capacidad - (cargaActual + totalSeleccionado);
+      pesoRestante.innerText = `${restante.toFixed(2)} kg`;
+      pesoRestante.style.color = restante < 0 ? "red" : "green";
+      btnConfirmar.disabled = restante < 0;
+    };
+
+    // 🔹 Render dinámico a partir del Map
+    for (const p of paquetes.sort((a, b) => a.peso - b.peso)) {
+      // Llamamos a tu endpoint para obtener el texto formateado
+      const textoRes = await fetch(`${API}/paquete/aTexto?ID=${p.id}`);
+      const texto = await textoRes.text();
+
+      const div = document.createElement("div");
+      div.innerHTML = `
+    <input type="checkbox" id="p${p.id}" data-id="${p.id}" data-peso="${p.peso}">
+    <label for="p${p.id}">${texto}</label>
+  `;
+      contenedor.appendChild(div);
+
+      div.querySelector("input").addEventListener("change", e => {
+        const idSel = parseInt(e.target.dataset.id);
+        const pesoSel = parseFloat(e.target.dataset.peso);
+
+        if (e.target.checked) {
+          seleccionados.push({ id: idSel, peso: pesoSel });
+        } else {
+          seleccionados = seleccionados.filter(x => x.id !== idSel);
+        }
+        actualizarPeso();
+      });
+    }
+
+    // 🔹 Confirmar carga
+    btnConfirmar.onclick = async () => {
+      if (seleccionados.length === 0) {
+        alert("Seleccioná al menos un paquete.");
         return;
       }
-    }
-    const nuevo = crearCamion();
-    nuevo.paquetes.push(paquete);
-    nuevo.carga += paquete.peso;
-  }
 
-  // ======= Botones =======
-  document.getElementById("btnDP").addEventListener("click", () => {
-    const data = leerInputs();
-    if (!data) return alert("Completá peso y ciudad.");
-    colocarDP(data);
-    pesoEl.value = ""; ciudadEl.value = "";
-    render();
+      const body = {
+        id: camionId,
+        paquetes: seleccionados.map(x => x.id)
+      };
+
+      const res = await fetch(`${API}/camion/cargarManual`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      const msg = await res.text();
+      document.getElementById("msgCarga").innerText = msg;
+      contenedor.innerHTML = "";
+      pesoRestante.innerText = "";
+    };
+
+    actualizarPeso();
+    document.getElementById("cargaManual").style.display = "block";
   });
 
-  document.getElementById("btnDyV").addEventListener("click", () => {
-    const data = leerInputs();
-    if (!data) return alert("Completá peso y ciudad.");
-    colocarDyV(data);
-    pesoEl.value = ""; ciudadEl.value = "";
-    render();
-  });
 
-  // DFS “por arriba”: muestra recorrido desde la ciudad destino
-  document.getElementById("btnDFS").addEventListener("click", async () => {
-    const ciudad = (ciudadEl.value || "").trim();
-    if (!ciudad) return alert("Ingresá una ciudad destino.");
-    const loader = document.getElementById("loaderDFS");
-    const msg = document.getElementById("msgDFS");
-    loader.style.display = "inline-block";
-    msg.innerHTML = "";
-    try {
-      const res = await fetch(`${API}/grafo/dfs?inicio=${encodeURIComponent(ciudad)}`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      msg.innerHTML = `Recorrido DFS desde <b>${ciudad}</b>: ${data.join(" → ")}`;
-    } catch {
-      msg.innerHTML = "⚠️ Ejemplo (mock): CiudadX → CiudadY → CiudadZ";
-    } finally {
-      loader.style.display = "none";
-    }
-  });
 
-  // Estado inicial
-  render();
+
+
 </script>
 
 </body>

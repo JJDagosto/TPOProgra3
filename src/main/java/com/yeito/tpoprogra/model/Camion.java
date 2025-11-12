@@ -26,6 +26,10 @@ public class Camion {
         this.cargaActual = 0.0;
     }
 
+    public Long getId() {
+        return id;
+    }
+
     public double getCapacidad() { return capacidad; }
     public void setCapacidad(double capacidad) { this.capacidad = capacidad; }
 
@@ -40,5 +44,13 @@ public class Camion {
         destinos.add(p.getDestino());
     }
 
+    public String toString(){
+        return id + " | " + cargaActual +"/" + capacidad +"kg";
+    }
+
     public double getCargaActual() { return cargaActual; }
+
+    public void setCargaActual(double cargaActual) {
+        this.cargaActual = cargaActual;
+    }
 }

@@ -1,9 +1,12 @@
 package com.yeito.tpoprogra.service;
 
+import com.yeito.tpoprogra.model.Paquete;
 import com.yeito.tpoprogra.repository.CiudadRepository;
+import com.yeito.tpoprogra.repository.PaqueteRepository;
 import com.yeito.tpoprogra.repository.RutaRepository;
 import com.yeito.tpoprogra.model.Ciudad;
 import com.yeito.tpoprogra.model.Ruta;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,10 +21,14 @@ public class NeoService {
 
     private final CiudadRepository CiudadRepository;
     private final RutaRepository RutaRepository;
+    private final com.yeito.tpoprogra.repository.PaqueteRepository PaqueteRepository;
 
-    public NeoService(CiudadRepository CiudadRepository , RutaRepository RutaRepository) {
+    @Autowired
+    public NeoService(CiudadRepository CiudadRepository , RutaRepository RutaRepository, com.yeito.tpoprogra.repository.PaqueteRepository PaqueteRepository) {
         this.CiudadRepository = CiudadRepository;
         this.RutaRepository = RutaRepository;
+        this.PaqueteRepository = PaqueteRepository;
+
     }
 
     public CiudadRepository getCiudadRepository() {
@@ -136,6 +143,10 @@ public class NeoService {
         }
 
         return grafo;
+    }
+
+    public List<Paquete> getPaquetes() {
+        return PaqueteRepository.findAll();
     }
 
 }

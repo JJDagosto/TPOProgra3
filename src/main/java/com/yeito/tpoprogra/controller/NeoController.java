@@ -2,15 +2,22 @@
 package com.yeito.tpoprogra.controller;
 
 
+import com.yeito.tpoprogra.model.Camion;
+import com.yeito.tpoprogra.model.Ciudad;
+import com.yeito.tpoprogra.model.Paquete;
+import com.yeito.tpoprogra.repository.CamionRepository;
 import com.yeito.tpoprogra.repository.CiudadRepository;
+import com.yeito.tpoprogra.repository.PaqueteRepository;
 import com.yeito.tpoprogra.service.NeoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.yeito.tpoprogra.service.GrafoService;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/neo")
@@ -22,6 +29,13 @@ public class NeoController {
     private NeoService neoService;
     @Autowired
     private GrafoService grafoService;
+    @Autowired
+    private PaqueteRepository paqueteRepository;
+    @Autowired
+    private CamionRepository camionRepository;
+    @Autowired
+    private CiudadRepository ciudadRepository;
+
 
     // --- CIUDADES ---
 
@@ -68,12 +82,6 @@ public class NeoController {
         neoService.eliminarRuta(neoService.obtenerIdRuta(destino, origen));
         return "🗑️ Ruta eliminada entre "; //+ origen + " y " + destino;
     }
-
-//    @GetMapping("/ciudad/new")
-//    public String newCiudad(@RequestParam String nombre) {
-//        neoService.crearCiudad(nombre);
-//        return nombre+"Creada correctamente";
-//    }
 
     @GetMapping ("/ciudad/id")
     public Long obtenerIdCiudad(@RequestParam String nombre) {
@@ -130,6 +138,98 @@ public class NeoController {
     @GetMapping("/grafo/kruskal")
     public Map<String, Object> kruskal() {
         return grafoService.kruskal();
+    }
+
+    @PostMapping("/paquete")
+    public String crearPaquete(
+            @RequestParam double peso,
+            @RequestParam String origen,
+            @RequestParam String destino
+    ) {
+        Optional<Ciudad> cOrigenOpt = ciudadRepository.findByNombre(origen);
+        Optional<Ciudad> cDestinoOpt = ciudadRepository.findByNombre(destino);
+
+        if (cOrigenOpt.isEmpty() || cDestinoOpt.isEmpty()) {
+            return "❌ Origen o destino inválido";
+        }
+
+        Ciudad cOrigen = cOrigenOpt.get();
+        Ciudad cDestino = cDestinoOpt.get();
+
+
+        if (cOrigen == null || cDestino == null) {
+            return "❌ Origen o destino inválido";
+        }
+
+        Paquete paquete = new Paquete(peso, cOrigen, cDestino);
+        paqueteRepository.save(paquete);
+        return "📦 Paquete creado: " + peso + " kg de " + origen + " a " + destino;
+    }
+
+    // Eliminar paquete
+    @DeleteMapping("/paquete/{id}")
+    public String eliminarPaquete(@PathVariable Long id) {
+        if (!paqueteRepository.existsById(id)) return "❌ Paquete no encontrado";
+        paqueteRepository.deleteById(id);
+        return "🗑️ Paquete eliminado correctamente";
+    }
+
+    @GetMapping("/paquetes/all")
+    public List<Paquete> getPaquetes() {
+        return neoService.getPaquetes();
+    }
+
+    @GetMapping("/paquetes/sort")
+    public List<Paquete> quickSortPaquetes() {
+        List<Paquete> paquetes = neoService.getPaquetes();
+        grafoService.quickSortPaquetes(paquetes, 0, paquetes.size() - 1);
+        return paquetes;
+    }
+
+    @PostMapping("/camion/cargar")
+    public String cargarCamion(@RequestParam Camion camion) {
+        // Lógica de carga óptima (Knapsack)
+        List<Paquete> seleccionados = grafoService.cargarCamionOptimo(camion);
+
+        // Guardamos el camión con sus paquetes y destinos en Neo4j
+        camionRepository.save(camion);
+
+        // Mensaje de resumen
+        return "🚚 Camión cargado con " + seleccionados.size() + " paquetes ("
+                + camion.getCargaActual() + "/" + camion.getCapacidad() + " kg)";
+    }
+
+    // Crear un camión vacío
+    @PostMapping("/camion")
+    public String crearCamion(@RequestParam double capacidad) {
+        Camion camion = new Camion(capacidad);
+        camionRepository.save(camion);
+        return "🚚 Camión creado con capacidad " + capacidad + " kg";
+    }
+
+    // Obtener todos los camiones
+    @GetMapping("/camion")
+    public List<Camion> obtenerCamiones() {
+        return camionRepository.findAll();
+    }
+    // Eliminar camión
+    @DeleteMapping("/camion/{id}")
+    public String eliminarCamion(@PathVariable Long id) {
+        if (!camionRepository.existsById(id)) return "❌ Camión no encontrado";
+        camionRepository.deleteById(id);
+        return "🗑️ Camión eliminado correctamente";
+    }
+
+    @GetMapping("/grafo/rutas")
+    public List<List<String>> obtenerRutas(@RequestParam String origen, @RequestParam String destino) {
+        return grafoService.encontrarTodasLasRutas(origen, destino);
+    }
+
+    @GetMapping("/grafo/optimizarCiudades")
+    public GrafoService.ResultadoRuta optimizarCiudades(
+            @RequestParam String inicio,
+            @RequestParam double maxDistancia) {
+        return grafoService.optimizarCiudades(inicio, maxDistancia);
     }
 
 

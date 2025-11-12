@@ -15,7 +15,6 @@ public class Ciudad {
     @Id
     @GeneratedValue
     private Long id;
-
     private String nombre;
 
     public Ciudad() {}

@@ -60,7 +60,7 @@
 <script>
   const API = "http://localhost:8080/neo";
 
-  // ✅ Cargar ciudades en el select
+  // Cargar ciudades en el select
   async function cargarCiudades() {
     const res = await fetch(`${API}/ciudad/get/nombres`);
     const data = await res.json();
@@ -129,7 +129,7 @@
             }
     );
 
-    // ✅ Dibujar textura de ruta
+    // Dibujar textura de ruta
     const roadImg = new Image();
     roadImg.src = "imgs/ruta.png";
 

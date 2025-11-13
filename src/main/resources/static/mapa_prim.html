@@ -49,7 +49,7 @@
 <script>
   const API = "http://localhost:8080/neo";
 
-  // ✅ Cargar ciudades
+  // Cargar ciudades
   async function cargarCiudades() {
     const res = await fetch(`${API}/ciudad/get/nombres`);
     const data = await res.json();
@@ -74,7 +74,7 @@
     const res = await fetch(`${API}/grafo/prim?inicio=${encodeURIComponent(inicio)}`);
     const data = await res.json();
 
-    // ✅ Aristas son arrays [origen, destino, peso]
+    // Aristas son arrays [origen, destino, peso]
     const nodosSet = new Set();
     data.aristas.forEach(a => {
       nodosSet.add(a[0]);
@@ -117,7 +117,7 @@
 
     const network = new vis.Network(container, networkData, options);
 
-    // ✅ Dibujar ruta con textura
+    // Dibujar ruta con textura
     const roadImg = new Image();
     roadImg.src = "imgs/ruta.png";
 

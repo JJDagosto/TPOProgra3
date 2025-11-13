@@ -46,7 +46,7 @@
 <script>
   const API = "http://localhost:8080/neo";
 
-  // ✅ Cargar ciudades en el select
+  // Cargar ciudades en el select
   async function cargarCiudades() {
     const res = await fetch(`${API}/ciudad/get/nombres`);
     const data = await res.json();
@@ -68,7 +68,7 @@
       return;
     }
 
-    // ✅ El backend devuelve SOLO una lista con el recorrido
+    // El backend devuelve SOLO una lista con el recorrido
     const res = await fetch(`${API}/grafo/bfs?inicio=${encodeURIComponent(inicio)}`);
     const recorrido = await res.json();
 
@@ -77,7 +77,7 @@
       return;
     }
 
-    // ✅ Crear nodos
+    // Crear nodos
     const nodes = recorrido.map(ciudad => ({
       id: ciudad,
       label: ciudad,
@@ -87,7 +87,7 @@
       font: { color: "#ef6c00", size: 18, bold: true, face: "Arial", vadjust: 25 }
     }));
 
-    // ✅ Crear aristas entre cada par consecutivo
+    // Crear aristas entre cada par consecutivo
     const edges = [];
     for (let i = 1; i < recorrido.length; i++) {
       edges.push({
@@ -113,7 +113,7 @@
 
     const network = new vis.Network(container, networkData, options);
 
-    // ✅ Dibujar caminos con ruta.png
+    // Dibujar caminos con ruta.png
     const roadImg = new Image();
     roadImg.src = "imgs/ruta.png";
 

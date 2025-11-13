@@ -39,6 +39,8 @@ public class GrafoService {
 
 
     // --- BFS (Breadth-First Search) ---
+    // O(n + m)
+
     public List<String> bfs(String inicio) {
         if (!grafo.containsKey(inicio)) {
             throw new IllegalArgumentException("La ciudad '" + inicio + "' no existe en el grafo.");
@@ -68,6 +70,8 @@ public class GrafoService {
     }
 
     // --- DFS (Depth-First Search) ---
+    // O(n + m)
+
     public List<String> dfs(String inicio) {
         if (!grafo.containsKey(inicio)) {
             throw new IllegalArgumentException("La ciudad '" + inicio + "' no existe en el grafo.");
@@ -79,6 +83,7 @@ public class GrafoService {
         return recorrido;
     }
 
+    // O(n + m)
     private void dfsRecursivo(String actual, Set<String> visitados, List<String> recorrido) {
         visitados.add(actual);
         recorrido.add(actual);
@@ -92,6 +97,8 @@ public class GrafoService {
     }
 
     // --- Mostrar resumen del grafo ---
+    // O(n + m)
+
     public String resumenGrafo() {
         StringBuilder sb = new StringBuilder();
         sb.append("Grafo cargado:\n");
@@ -101,6 +108,7 @@ public class GrafoService {
         return sb.toString();
     }
 
+    // O((n + m) log n)
     public Map<String, Object> dijkstra(String origen, String destino) {
         Map<String, Map<String, Double>> grafo = this.grafo;
 
@@ -168,6 +176,7 @@ public class GrafoService {
         return resultado;
     }
 
+    // O((n + m) log n)
     public Map<String, Object> prim(String inicio) {
         Map<String, Map<String, Double>> grafo = this.grafo;
 
@@ -214,6 +223,7 @@ public class GrafoService {
         return resultado;
     }
 
+    // O(m log m)
     public Map<String, Object> kruskal() {
         // 1️⃣ Cargar el grafo actual
         Map<String, Map<String, Double>> grafo = this.grafo;
@@ -272,6 +282,7 @@ public class GrafoService {
         return resultado;
     }
 
+    // O(α(n))
     private String find(Map<String, String> padre, String nodo) {
         if (!padre.get(nodo).equals(nodo)) {
             padre.put(nodo, find(padre, padre.get(nodo)));
@@ -280,6 +291,8 @@ public class GrafoService {
     }
 
     //Quicksort
+    // O(n log n) promedio, O(n²) peor caso
+
     public void quickSortPaquetes(List<Paquete> paquetes, int low, int high) {
         if (low < high) {
             int pivotIndex = partitionPaquetes(paquetes, low, high);
@@ -287,6 +300,8 @@ public class GrafoService {
             quickSortPaquetes(paquetes, pivotIndex + 1, high);
         }
     }
+
+    // O(n)
 
     private int partitionPaquetes(List<Paquete> paquetes, int low, int high) {
         double pivot = paquetes.get(high).getPeso(); // usamos el peso del último como pivote
@@ -319,6 +334,8 @@ public class GrafoService {
         return seleccionados;
     }
 
+    // O(n * capacidad)
+
     private List<Paquete> resolverKnapsack(List<Paquete> paquetes, double capacidad) {
         int n = paquetes.size();
         double[][] dp = new double[n + 1][(int) (capacidad + 1)];
@@ -347,6 +364,7 @@ public class GrafoService {
     }
 
     //Backtracking
+    // O(n!) en el peor caso
 
     public List<List<String>> encontrarTodasLasRutas(String inicio, String destino) {
         List<List<String>> rutas = new ArrayList<>();
@@ -357,6 +375,8 @@ public class GrafoService {
 
         return rutas;
     }
+
+    // O(n!) con poda
 
     private void backtrack(String actual, String destino, Set<String> visitados, List<String> rutaActual, List<List<String>> rutas) {
         visitados.add(actual);
@@ -393,6 +413,8 @@ public class GrafoService {
         }
     }
 
+    // O(n!) con poda (branch and bound)
+
     public ResultadoRuta optimizarCiudades(String inicio, double maxDistancia) {
         Map<String, Map<String, Double>> grafo = this.grafo;
         Set<String> visitadas = new HashSet<>();
@@ -403,6 +425,7 @@ public class GrafoService {
         return mejor;
     }
 
+    // O(n!) con poda
     private void branchAndBound(Map<String, Map<String, Double>> grafo, String actual,
                                 Set<String> visitadas, List<String> rutaActual,
                                 double distanciaActual, double maxDistancia, ResultadoRuta mejor) {

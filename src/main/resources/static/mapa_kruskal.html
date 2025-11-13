@@ -90,7 +90,7 @@
 
     const network = new vis.Network(container, networkData, options);
 
-    // 🔹 Cargamos la textura de la ruta
+    // Cargamos la textura de la ruta
     const roadImg = new Image();
     roadImg.src = "imgs/ruta.png";
 
@@ -121,7 +121,7 @@
       }
     }
 
-    // ⚡ Dibujamos las calles antes de los nodos
+    // Dibujamos las calles antes de los nodos
     roadImg.onload = function () {
       network.on("beforeDrawing", function (ctx) {
         data.aristas.forEach(a => {
